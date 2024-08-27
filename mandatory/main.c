@@ -344,6 +344,22 @@ void	draw_normal(t_line line, t_img *img)
 	draw_line(p0, p1, img);
 }
 
+void	print_segment_list(t_list segments)
+{
+	t_node		*tmp;
+	t_segment	*tmp1;
+
+	tmp = segments.head;
+	while (tmp)
+	{
+		tmp1 = tmp->content;
+		printf("a:%f, %f, b:%f, %f\n", 
+		tmp1->segment.a.px, tmp1->segment.a.py, tmp1->segment.b.px, tmp1->segment.a.py);
+		tmp = tmp->next;
+	}
+
+}
+
 void	draw_map_editor(t_map_editor map_editor, t_img *img)
 {
 	t_node		*tmp;
@@ -376,6 +392,7 @@ typedef struct s_bsp
 	struct s_bsp	*front;
 	struct s_bsp	*back;
 	t_segment		*splitter;
+	int				id;
 }				t_bsp;
 
 
@@ -400,7 +417,18 @@ float	cross_2d(t_point a, t_point b)
 
 #define EPS 1e-4
 
-int	split_segments(t_list *front, t_list *back, t_list segments, t_bsp *nd)
+void	ss_add_segment(t_segment splitter, t_list *new_segments, t_bsp *nd)
+{
+	t_segment	*content_tmp;
+	content_tmp = segment(splitter.segment);
+	if (content_tmp)
+	{
+		nd->id = new_segments->size;
+		list_push_f(new_segments, node(content_tmp, &default_node_free));
+	}
+}
+
+int	split_segments(t_list *front, t_list *back, t_list segments, t_bsp *nd, t_list *new_segments)
 {
 	t_segment	*splitter_seg;
 	t_node		*tmp;
@@ -486,12 +514,15 @@ int	split_segments(t_list *front, t_list *back, t_list segments, t_bsp *nd)
 				list_push_f(back, node(content_tmp, &default_node_free));
 			}
 		}
+
 	}
+	ss_add_segment(*splitter_seg, new_segments, nd);
+	return (1);
 }
 
-t_bsp	*build_bsp(t_list segments);
+t_bsp	*build_bsp(t_list segments, t_list *new_segments);
 
-t_bsp	*build_bsp(t_list segments)
+t_bsp	*build_bsp(t_list segments, t_list *new_segments)
 {
 	t_bsp	*result;
 	t_list	front;
@@ -502,13 +533,15 @@ t_bsp	*build_bsp(t_list segments)
 	result = bsp(NULL, NULL, NULL);
 	if (!result)
 		return (NULL);
-	if (!split_segments(&front, &back, segments, result))
+	ft_bzero(&front, sizeof(t_list));
+	ft_bzero(&back, sizeof(t_list));
+	if (!split_segments(&front, &back, segments, result, new_segments))
 		return (NULL);
 
 	if (front.head)
-		result->front = build_bsp(front);
+		result->front = build_bsp(front, new_segments);
 	if (back.head)
-		result->back = build_bsp(back);
+		result->back = build_bsp(back, new_segments);
 
 	list_clear(&front);
 	list_clear(&back);
@@ -552,11 +585,14 @@ int	main(int argc, char **argv)
 
 	t_map_editor map_edit;
 
-	map_edit = new_map_editor(segments, 50, cub->tmp->resolution);
+	//map_edit = new_map_editor(segments, 50, cub->tmp->resolution);
 
 	// this part is parsing the map ======================================================
+	t_list	new_segments;
 
-	cub->root_node = build_bsp(segments);
+	new_segments = list(NULL);
+	cub->root_node = build_bsp(segments, &new_segments);
+	map_edit = new_map_editor(new_segments, 50, cub->tmp->resolution);
 
 	draw_map_editor(map_edit, cub->tmp);
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
