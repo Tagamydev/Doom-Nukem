@@ -284,29 +284,18 @@ t_line	get_bounds(t_list *segments)
 //============================================= s_map in t_engine
 typedef struct s_map_editor
 {
-	t_list			segments;
 	t_point			screen_center;
 	int				screen_zoom;
-	int				screen_offset;
-	int				screen_real_offset;
-	t_resolution	map_acot;
-	t_line			bounds;
 }				t_map_editor;
 
-t_map_editor	new_map_editor(t_list segments, int screen_offset, t_resolution img_res);
+t_map_editor	new_map_editor();
 
-t_map_editor	new_map_editor(t_list segments, int screen_offset, t_resolution img_res)
+t_map_editor	new_map_editor()
 {
 	t_map_editor	result;
 
-	result.segments = segments;
 	result.screen_center = point(0, 0);
-	result.screen_zoom = 0;
-	result.screen_offset = screen_offset;
-	result.screen_real_offset = screen_offset + result.screen_zoom;
-	result.map_acot = resolution(img_res.width - result.screen_real_offset, 
-	img_res.height - result.screen_real_offset);
-	result.bounds = get_bounds(&result.segments);
+	result.screen_zoom = 100;
 	return (result);
 }
 
@@ -314,6 +303,7 @@ t_map_editor	new_map_editor(t_list segments, int screen_offset, t_resolution img
 
 //============================================== draw map editor in mlx_utils
 
+/*
 t_point	remap_point(t_point pt, t_line bounds, t_resolution map_offset, int offset)
 {
 	t_point	result;
@@ -325,6 +315,7 @@ t_point	remap_point(t_point pt, t_line bounds, t_resolution map_offset, int offs
 	resulty = (pt.py - bounds.b.py) * (map_offset.height - offset) / (bounds.a.py - bounds.b.py) + offset;
 	return (point(resultx, resulty));
 }
+*/
 
 void	draw_normal(t_line line, t_img *img)
 {
@@ -360,25 +351,37 @@ void	print_segment_list(t_list segments)
 
 }
 
-void	draw_map_editor(t_map_editor map_editor, t_img *img)
+t_point	remap_point(t_point pt, int zoom, t_point center, t_resolution res)
+{
+	t_resolution	half;
+
+	half = resolution(res.width / 2, res.height / 2);
+	pt.px *= zoom;
+	pt.py *= zoom;
+	pt.px += half.width;
+	pt.py += half.height;
+	return(pt);
+}
+
+void	draw_segments(t_list segments, t_map_editor map_editor, t_img *img)
 {
 	t_node		*tmp;
 	t_segment	*tmp1;
 	t_point		tmp2;
 	t_point		tmp3;
 
-	tmp = map_editor.segments.head;
+	tmp = segments.head;
 	while (tmp)
 	{
 		tmp1 = (t_segment *)tmp->content;
 		tmp2 = tmp1->segment.a;
 		tmp3 = tmp1->segment.b;
-		tmp2 = remap_point(tmp2, map_editor.bounds, map_editor.map_acot, map_editor.screen_real_offset);
-		tmp3 = remap_point(tmp3, map_editor.bounds, map_editor.map_acot, map_editor.screen_real_offset);
+		tmp2 = remap_point(tmp2, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+		tmp3 = remap_point(tmp3, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
 		draw_line(tmp2, tmp3, img);
 		draw_normal(line(tmp2, tmp3), img);
-		draw_circle(5, img, tmp2);
-		draw_circle(5, img, tmp3);
+		draw_circle(map_editor.screen_zoom / 20, img, tmp2);
+		draw_circle(map_editor.screen_zoom / 20, img, tmp3);
 		tmp = tmp->next;
 	}
 }
@@ -545,11 +548,29 @@ t_bsp	*build_bsp(t_list segments, t_list *new_segments)
 
 	list_clear(&front);
 	list_clear(&back);
-	return (NULL);
+	return (result);
 }
 
 //=============================================BSP IN ENGINE
 
+//============================================ print bsp
+
+void	print_bsp(t_bsp *root)
+{
+	
+}
+
+//============================================ print bsp
+
+//============================================= t_pplayer
+
+typedef struct s_pplayer
+{
+	t_point	position;
+	float	angle;
+}			t_pplayer;
+
+//============================================= t_pplayer
 
 
 int	main(int argc, char **argv)
@@ -573,10 +594,10 @@ int	main(int argc, char **argv)
 	t_list	segments;
 
 	segments = list(NULL);
-	list_push_b(&segments, node(segment(line(point(1, 1), point(7, 1))), &default_node_free));
+	list_push_b(&segments, node(segment(line(point(0, 0), point(7, 1))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(7, 1), point(7, 8))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(7, 8), point(1, 8))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(1, 8), point(1, 1))), &default_node_free));
+	list_push_b(&segments, node(segment(line(point(1, 8), point(0, 0))), &default_node_free));
 
 	list_push_b(&segments, node(segment(line(point(2, 4), point(2, 3))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(2, 3), point(5, 5))), &default_node_free));
@@ -592,9 +613,11 @@ int	main(int argc, char **argv)
 
 	new_segments = list(NULL);
 	cub->root_node = build_bsp(segments, &new_segments);
-	map_edit = new_map_editor(new_segments, 50, cub->tmp->resolution);
 
-	draw_map_editor(map_edit, cub->tmp);
+	
+	map_edit = new_map_editor();
+
+	draw_segments(new_segments, map_edit, cub->tmp);
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 
 	if (!cub)
