@@ -30,6 +30,8 @@ typedef struct s_map_editor
 typedef enum e_game_mode
 {
 	GAME,
+	PAUSE,
+	LAST,
 	EDITOR
 }				t_game_mode;
 
@@ -44,6 +46,7 @@ typedef struct s_cub
 	unsigned int	frame;
 	float			delta_time;
 	t_game_mode		game_mode;
+	int				focus;
 
 	t_img			*tmp;
 

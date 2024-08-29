@@ -579,22 +579,40 @@ t_player	*new_player(t_camera *camera)
 }
 //============================================= t_player in t-engine
 
+t_game_mode	change_game_mode(t_game_mode mode)
+{
+	static	t_game_mode	last = EDITOR;
+
+	if (mode == LAST)
+		return (last);
+	else
+	{
+		return (mode);
+	}
+}
+
+int	pause_mode(t_cub *cub)
+{
+	cub->game_mode = PAUSE;
+	fill_img(cub->tmp, color_from_rgb(0, 0, 0));
+	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
+	return (1);
+}
+
 int	game_mode(t_cub *cub)
 {
-
-//	if (cub->focus)
-	{
-		mlx_mouse_hide(cub->mlx, cub->mlx_win);
-		mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
-
-	}
+	cub->game_mode = GAME;
+	if (!cub->focus)
+		return (pause_mode(cub));
+	mlx_mouse_hide(cub->mlx, cub->mlx_win);
+	mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
 	fill_img(cub->tmp, color_from_rgb(255, 0, 255));
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 }
 
 int editor_mode(t_cub *cub)
 {
-
+	cub->game_mode = EDITOR;
 	mlx_mouse_show(cub->mlx, cub->mlx_win);
 	fill_img(cub->tmp, color_from_rgb(255, 0, 0));
 	draw_segments(cub->segments, cub->map_editor, cub->tmp);
@@ -664,16 +682,17 @@ int	focus_in(void *param)
 	t_cub		*cub;
 
 	cub = (t_cub *)param;
-
-	if (cub->game_mode == GAME)
-	{
-		
-	}
+	cub->focus = 1;
 	printf("this is focus\n");
 }
 
 int	focus_out(void *param)
 {
+	t_cub		*cub;
+
+	cub = (t_cub *)param;
+	cub->focus = 0;
+
 	printf("this is not focus\n");
 }
 
@@ -731,8 +750,8 @@ int	main(int argc, char **argv)
 		return (-1);
 	}
 	mlx_hook(cub->mlx_win, 2, (1L<<0), key_press, cub);
-	mlx_hook(cub->mlx_win, 7, (1L<<4), focus_in, cub);
-	mlx_hook(cub->mlx_win, 8, (1L<<5), focus_out, cub);
+	mlx_hook(cub->mlx_win, 9, (1L<<21), focus_in, cub);
+	mlx_hook(cub->mlx_win, 10, (1L<<21), focus_out, cub);
 	mlx_mouse_hook(cub->mlx_win, mouse_press, cub);
 	mlx_mouse_move(cub->mlx, cub->mlx_win, 500, 500);
 	//mlx_hook(cub->mlx_win, 4, 0, (int (*)())mouse_press, cub);
