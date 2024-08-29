@@ -126,15 +126,6 @@ t_cub	*ft_constructor(char *map_path)
 	return (result);
 }
 
-int	ft_draw_frame(void *p_cub)
-{
-	t_cub	*cub;
-
-	cub = (t_cub *)p_cub;
-	cub->frame += 1;
-	return (0);
-}
-
 
 //=================================================== segment in engine
 
@@ -282,11 +273,13 @@ t_line	get_bounds(t_list *segments)
 //============================================= get_bounds in engine
 
 //============================================= s_map in t_engine
+/*
 typedef struct s_map_editor
 {
-	t_point			screen_center;
-	int				screen_zoom;
+
 }				t_map_editor;
+*/
+// the map editor type comes with the engine
 
 t_map_editor	new_map_editor();
 
@@ -302,21 +295,6 @@ t_map_editor	new_map_editor()
 //============================================= s_map in t_engine
 
 //============================================== draw map editor in mlx_utils
-
-/*
-t_point	remap_point(t_point pt, t_line bounds, t_resolution map_offset, int offset)
-{
-	t_point	result;
-	float	resultx;
-	float	resulty;
-
-	// you can calc this value 1 time or every time there is an update event
-	resultx = (pt.px - bounds.b.px) * (map_offset.width - offset) / (bounds.a.px - bounds.b.px) + offset;
-	resulty = (pt.py - bounds.b.py) * (map_offset.height - offset) / (bounds.a.py - bounds.b.py) + offset;
-	return (point(resultx, resulty));
-}
-*/
-
 void	draw_normal(t_line line, t_img *img)
 {
 	t_point	p10;
@@ -358,8 +336,8 @@ t_point	remap_point(t_point pt, int zoom, t_point center, t_resolution res)
 	half = resolution(res.width / 2, res.height / 2);
 	pt.px *= zoom;
 	pt.py *= zoom;
-	pt.px += half.width;
-	pt.py += half.height;
+	pt.px += half.width - center.px;
+	pt.py += half.height - center.py;
 	return(pt);
 }
 
@@ -519,7 +497,8 @@ int	split_segments(t_list *front, t_list *back, t_list segments, t_bsp *nd, t_li
 		}
 
 	}
-	ss_add_segment(*splitter_seg, new_segments, nd);
+	if (!((front && front->head )|| (back && back->head)))
+		ss_add_segment(*splitter_seg, new_segments, nd);
 	return (1);
 }
 
@@ -562,15 +541,141 @@ void	print_bsp(t_bsp *root)
 
 //============================================ print bsp
 
-//============================================= t_pplayer
-
-typedef struct s_pplayer
+//============================================= t_camera in t-engine
+t_camera	*new_camera(t_point pos, float angle, float fov, t_screen *screen)
 {
-	t_point	position;
-	float	angle;
-}			t_pplayer;
+	t_camera	*result;
 
-//============================================= t_pplayer
+	result = malloc(sizeof(t_camera));
+	if (!result)
+		return(NULL);
+	result->angle = angle;
+	result->pos = pos;
+	result->fov = fov;
+	result->screen = screen;
+	return (result);
+}
+
+//============================================= t_camera in t-engine
+//============================================= t_player in t-engine
+
+
+t_player	*new_player(t_camera *camera)
+{
+	t_player	*result;
+
+	result = malloc(sizeof(t_player));
+	if (!result)
+		return (NULL);
+	result->camera = new_camera(point(0, 0), 90, 90, NULL);
+	result->update = NULL;
+	result->start = NULL;
+	if (!result->camera)
+	{
+		free(result);
+		return (NULL);
+	}
+	return(result);
+}
+//============================================= t_player in t-engine
+
+int	game_mode(t_cub *cub)
+{
+
+//	if (cub->focus)
+	{
+		mlx_mouse_hide(cub->mlx, cub->mlx_win);
+		mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
+
+	}
+	fill_img(cub->tmp, color_from_rgb(255, 0, 255));
+	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
+}
+
+int editor_mode(t_cub *cub)
+{
+
+	mlx_mouse_show(cub->mlx, cub->mlx_win);
+	fill_img(cub->tmp, color_from_rgb(255, 0, 0));
+	draw_segments(cub->segments, cub->map_editor, cub->tmp);
+	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
+}
+
+int	frame(void *p_cub)
+{
+	t_cub	*cub;
+
+	cub = (t_cub *)p_cub;
+	cub->frame += 1;
+	if (cub->game_mode == GAME)
+		game_mode(cub);
+	else
+		editor_mode(cub);
+
+	//block mouse in play mode
+	//printf("frame:%d\n", cub->frame);
+	return (0);
+}
+
+int	mouse_press(int key, int x, int y, void *param)
+{
+	printf("key:%d, intx;%d, inty:%d\n", key, x, y);
+}
+
+int key_press_game(int key, t_cub *cub)
+{
+
+}
+
+int key_press_editor(int key, t_cub *cub)
+{
+	if (key == 65362)
+		cub->map_editor.screen_center.py += 20;
+	if (key == 65363)
+		cub->map_editor.screen_center.px -= 20;
+	if (key == 65364)
+		cub->map_editor.screen_center.py -= 20;
+	if (key == 65361)
+		cub->map_editor.screen_center.px += 20;
+
+}
+
+int	key_press(int key, void *param)
+{
+	t_cub		*cub;
+
+	cub = (t_cub *)param;
+	printf("key:%d\n", key);
+	if (key == 109)
+	{
+		if (cub->game_mode == GAME)
+			cub->game_mode = EDITOR;
+		else
+			cub->game_mode = GAME;
+	}
+	if (cub->game_mode == GAME)
+		key_press_game(key, cub);
+	if (cub->game_mode == EDITOR)
+		key_press_editor(key, cub);
+}
+
+int	focus_in(void *param)
+{
+	t_cub		*cub;
+
+	cub = (t_cub *)param;
+
+	if (cub->game_mode == GAME)
+	{
+		
+	}
+	printf("this is focus\n");
+}
+
+int	focus_out(void *param)
+{
+	printf("this is not focus\n");
+}
 
 
 int	main(int argc, char **argv)
@@ -614,10 +719,10 @@ int	main(int argc, char **argv)
 	new_segments = list(NULL);
 	cub->root_node = build_bsp(segments, &new_segments);
 
+	cub->segments = new_segments;
 	
-	map_edit = new_map_editor();
+	cub->map_editor = new_map_editor();
 
-	draw_segments(new_segments, map_edit, cub->tmp);
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 
 	if (!cub)
@@ -625,6 +730,12 @@ int	main(int argc, char **argv)
 		write(2, "Error: cannot initialize the general struct\n", 45);
 		return (-1);
 	}
-	mlx_loop_hook(cub->mlx, ft_draw_frame, cub);
+	mlx_hook(cub->mlx_win, 2, (1L<<0), key_press, cub);
+	mlx_hook(cub->mlx_win, 7, (1L<<4), focus_in, cub);
+	mlx_hook(cub->mlx_win, 8, (1L<<5), focus_out, cub);
+	mlx_mouse_hook(cub->mlx_win, mouse_press, cub);
+	mlx_mouse_move(cub->mlx, cub->mlx_win, 500, 500);
+	//mlx_hook(cub->mlx_win, 4, 0, (int (*)())mouse_press, cub);
+	mlx_loop_hook(cub->mlx, frame, cub);
 	mlx_loop(cub->mlx);
 }

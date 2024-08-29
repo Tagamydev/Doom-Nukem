@@ -21,13 +21,29 @@
 # endif
 
 typedef struct s_bsp t_bsp;
+typedef struct s_map_editor
+{
+	t_point			screen_center;
+	int				screen_zoom;
+}			t_map_editor;
+
+typedef enum e_game_mode
+{
+	GAME,
+	EDITOR
+}				t_game_mode;
 
 typedef struct s_cub
 {
+
+	t_list			segments;
+	t_map_editor	map_editor;
+
 	void			*mlx;
 	void			*mlx_win;
 	unsigned int	frame;
 	float			delta_time;
+	t_game_mode		game_mode;
 
 	t_img			*tmp;
 
