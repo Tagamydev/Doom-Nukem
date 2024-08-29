@@ -593,8 +593,16 @@ t_game_mode	change_game_mode(t_game_mode mode)
 
 int	pause_mode(t_cub *cub)
 {
+	static	double	x = 100;
+	static	int		sign = -1;
+
+	if (x > 200 || x < 100)
+		sign = -sign;
+	x += 100 * sign * cub->delta_time;
 	cub->game_mode = PAUSE;
-	fill_img(cub->tmp, color_from_rgb(0, 0, 0));
+	mlx_mouse_show(cub->mlx, cub->mlx_win);
+	fill_img(cub->tmp, color_from_rgb(255, 255, 255));
+	draw_circle(50, cub->tmp, point(x, 200));
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 	return (1);
 }
@@ -619,16 +627,27 @@ int editor_mode(t_cub *cub)
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 }
 
+#include <time.h>
+
+
 int	frame(void *p_cub)
 {
 	t_cub	*cub;
+	static	clock_t last = 0;
+	clock_t	now;
+
 
 	cub = (t_cub *)p_cub;
 	cub->frame += 1;
+	now = clock();
+	cub->delta_time = (double)(now - last) / CLOCKS_PER_SEC;
+	last = now;
 	if (cub->game_mode == GAME)
 		game_mode(cub);
-	else
+	else if (cub->game_mode == EDITOR)
 		editor_mode(cub);
+	else if (cub->game_mode == PAUSE)
+		pause_mode(cub);
 
 	//block mouse in play mode
 	//printf("frame:%d\n", cub->frame);
@@ -648,13 +667,13 @@ int key_press_game(int key, t_cub *cub)
 int key_press_editor(int key, t_cub *cub)
 {
 	if (key == 65362)
-		cub->map_editor.screen_center.py += 20;
+		cub->map_editor.screen_center.py += 100 * cub->delta_time;
 	if (key == 65363)
-		cub->map_editor.screen_center.px -= 20;
+		cub->map_editor.screen_center.px -= 100 * cub->delta_time;
 	if (key == 65364)
-		cub->map_editor.screen_center.py -= 20;
+		cub->map_editor.screen_center.py -= 100 * cub->delta_time;
 	if (key == 65361)
-		cub->map_editor.screen_center.px += 20;
+		cub->map_editor.screen_center.px += 100 * cub->delta_time;
 
 }
 
@@ -695,7 +714,6 @@ int	focus_out(void *param)
 
 	printf("this is not focus\n");
 }
-
 
 int	main(int argc, char **argv)
 {

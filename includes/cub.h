@@ -44,7 +44,7 @@ typedef struct s_cub
 	void			*mlx;
 	void			*mlx_win;
 	unsigned int	frame;
-	float			delta_time;
+	double			delta_time;
 	t_game_mode		game_mode;
 	int				focus;
 
