@@ -326,6 +326,8 @@ void	draw_normal(t_line line, t_img *img)
 	t_point	p1;
 	t_point	normal;
 
+	p1 = line.a;
+	p0 = line.a;
 	p10 = line.a;
 	p10.px = line.b.px - line.a.px;
 	p10.py = line.b.py - line.a.py;
@@ -622,17 +624,17 @@ int	pause_mode(t_cub *cub)
 	static	double	x = 100;
 	static	int		sign = 1;
 
-	//if (x > 500.0f || x < 100.0f)
-	//	sign = -sign;
+	if (cub->game_mode != PAUSE)
+		fill_img(cub->tmp, color_from_rgb(255, 0, 0));
+	cub->game_mode = PAUSE;
+
 	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(255, 0, 0)));
 	x += (float)100 * (float)sign * cub->delta_time;
 	//printf("x:%f\n", x);
-	cub->game_mode = PAUSE;
 	mlx_mouse_show(cub->mlx, cub->mlx_win);
-	ft_bzero(cub->tmp->data_addr, sizeof(int) * 1920 * 1080);
 	unsigned int i;
 
-	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(0, 0, 0)));
+	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(255, 255, 255)));
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 	//mlx_do_sync(cub->mlx);
 	return (1);
@@ -640,12 +642,13 @@ int	pause_mode(t_cub *cub)
 
 int	game_mode(t_cub *cub)
 {
+	if (cub->game_mode != GAME)
+		fill_img(cub->tmp, color_from_rgb(255, 0, 255));
 	cub->game_mode = GAME;
 	if (!cub->focus)
 		return (pause_mode(cub));
 	mlx_mouse_hide(cub->mlx, cub->mlx_win);
 	mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
-	fill_img(cub->tmp, color_from_rgb(255, 0, 255));
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 }
 
@@ -653,11 +656,12 @@ int editor_mode(t_cub *cub)
 {
 	static	t_map_editor	last = {0};
 
+	if (cub->game_mode != EDITOR)
+		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
 	cub->game_mode = EDITOR;
 	mlx_mouse_show(cub->mlx, cub->mlx_win);
-	//fill_img(cub->tmp, color_from_rgb(255, 0, 0));
-	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(255, 0, 0));
-	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(0, 0, 0));
+	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(0, 0, 0));
+	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(255, 255, 255));
 	last = cub->map_editor;
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 }
@@ -732,9 +736,9 @@ int	key_press(int key, void *param)
 	if (key == 109)
 	{
 		if (cub->game_mode == GAME)
-			cub->game_mode = EDITOR;
+			return (editor_mode(cub));
 		else
-			cub->game_mode = GAME;
+			return (game_mode(cub));
 	}
 	if (cub->game_mode == GAME)
 		key_press_game(key, cub);
