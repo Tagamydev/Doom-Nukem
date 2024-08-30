@@ -355,6 +355,18 @@ void	print_segment_list(t_list segments)
 
 }
 
+t_point	undo_remap_point(t_point pt, int zoom, t_point center, t_resolution res)
+{
+	t_resolution	half;
+
+	half = resolution(res.width / 2, res.height / 2);
+	pt.px -= half.width - center.px;
+	pt.py -= half.height - center.py;
+	pt.px = pt.px / zoom;
+	pt.py = pt.py / zoom;
+	return(pt);
+}
+
 t_point	remap_point(t_point pt, int zoom, t_point center, t_resolution res)
 {
 	t_resolution	half;
@@ -652,14 +664,48 @@ int	game_mode(t_cub *cub)
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 }
 
+int	draw_grid(t_map_editor editor, t_img *img, t_color color)
+{
+	t_point end;
+	t_point start;
+	t_point tmp;
+	int		i;
+	int		j;
+	
+	end = undo_remap_point(point(img->resolution.width, img->resolution.height),
+	editor.screen_zoom, editor.screen_center, img->resolution);
+	start = undo_remap_point(point(0, 0),
+	editor.screen_zoom, editor.screen_center, img->resolution);
+	j = (int)start.py;
+	j -= 1;
+	while (j < (int)end.py + 1)
+	{
+		i = (int)start.px;
+		i -= 1;
+		while (i < (int)end.px + 1)
+		{
+			tmp = point((float)i, (float)j);
+			tmp = remap_point(tmp, editor.screen_zoom, editor.screen_center, img->resolution);
+			tmp.px = (unsigned int)tmp.px;
+			tmp.py = (unsigned int)tmp.py;
+			tmp.color = color;
+			put_pixel(img, tmp);
+			i++;
+		}
+		j++;
+	}
+}
+
 int editor_mode(t_cub *cub)
 {
-	static	t_map_editor	last = {0};
+	static t_map_editor	last = {0};
 
 	if (cub->game_mode != EDITOR)
 		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
 	cub->game_mode = EDITOR;
 	mlx_mouse_show(cub->mlx, cub->mlx_win);
+	draw_grid(last, cub->tmp, color_from_rgb(0, 0, 0));
+	draw_grid(cub->map_editor, cub->tmp, color_from_rgb(100, 100, 100));
 	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(0, 0, 0));
 	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(255, 255, 255));
 	last = cub->map_editor;
@@ -689,7 +735,11 @@ int	frame(void *p_cub)
 		cub->frame = 0;
 		last = now;
 	}
-	printf("delta_time:%f\n", cub->delta_time);
+	if (cub->delta_time < 0.016f)
+		cub->delta_time = 0.016f;
+	if (cub->delta_time > 0.1f)
+		cub->delta_time = 0.1f;
+	//printf("delta_time:%f\n", cub->delta_time);
 	//cub->delta_time = 0.01;
 
 	if (cub->game_mode == GAME)
@@ -707,6 +757,16 @@ int	frame(void *p_cub)
 int	mouse_press(int key, int x, int y, void *param)
 {
 	printf("key:%d, intx;%d, inty:%d\n", key, x, y);
+	t_cub		*cub;
+
+	cub = (t_cub *)param;
+	if (cub->game_mode == EDITOR)
+	{
+		if (key == 4)
+			cub->map_editor.screen_zoom -= 10;
+		if (key == 5)
+			cub->map_editor.screen_zoom += 10;
+	}
 }
 
 int key_press_game(int key, t_cub *cub)
@@ -717,13 +777,13 @@ int key_press_game(int key, t_cub *cub)
 int key_press_editor(int key, t_cub *cub)
 {
 	if (key == 65362)
-		cub->map_editor.screen_center.py += 10000 * cub->delta_time;
+		cub->map_editor.screen_center.py += 100 * cub->delta_time;
 	if (key == 65363)
-		cub->map_editor.screen_center.px -= 10000 * cub->delta_time;
+		cub->map_editor.screen_center.px -= 100 * cub->delta_time;
 	if (key == 65364)
-		cub->map_editor.screen_center.py -= 10000 * cub->delta_time;
+		cub->map_editor.screen_center.py -= 100 * cub->delta_time;
 	if (key == 65361)
-		cub->map_editor.screen_center.px += 10000 * cub->delta_time;
+		cub->map_editor.screen_center.px += 100 * cub->delta_time;
 
 }
 
