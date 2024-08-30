@@ -696,6 +696,30 @@ int	draw_grid(t_map_editor editor, t_img *img, t_color color)
 	}
 }
 
+t_point	mouse_pos_relative(t_cub *cub)
+{
+	t_point	result;
+	int		x;
+	int		y;
+
+	x = 0;
+	y = 0;
+	result = cub->map_editor.screen_center;
+	mlx_mouse_get_pos(cub->mlx, cub->mlx_win, &x, &y);
+
+	result.px = cub->last_mouse_grab.px - x;
+	result.py = cub->last_mouse_grab.py - y;
+
+	result.px = result.px * 100.0f / (float)cub->map_editor.screen_zoom;
+	result.py = result.py * 100.0f / (float)cub->map_editor.screen_zoom;
+	result.px += cub->map_editor.screen_center.px;
+	result.py += cub->map_editor.screen_center.py;
+	cub->last_mouse_grab = point(x, y);
+	//result.px = (int)result.px;
+	//result.py = (int)result.py;
+	return (result);
+}
+
 int editor_mode(t_cub *cub)
 {
 	static t_map_editor	last = {0};
@@ -703,6 +727,8 @@ int editor_mode(t_cub *cub)
 	if (cub->game_mode != EDITOR)
 		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
 	cub->game_mode = EDITOR;
+	if (cub->mouse_press)
+		cub->map_editor.screen_center = mouse_pos_relative(cub);
 	mlx_mouse_show(cub->mlx, cub->mlx_win);
 	draw_grid(last, cub->tmp, color_from_rgb(0, 0, 0));
 	draw_grid(cub->map_editor, cub->tmp, color_from_rgb(100, 100, 100));
@@ -760,12 +786,30 @@ int	mouse_press(int key, int x, int y, void *param)
 	t_cub		*cub;
 
 	cub = (t_cub *)param;
+	if (key == 1)
+	{
+		cub->mouse_press = 1;
+		cub->last_mouse_grab = point(x, y);
+	}
+
 	if (cub->game_mode == EDITOR)
 	{
 		if (key == 4)
 			cub->map_editor.screen_zoom -= 10;
 		if (key == 5)
 			cub->map_editor.screen_zoom += 10;
+	}
+}
+int	mouse_release(int key, int x, int y, void *param)
+{
+	printf("key:%d, intx;%d, inty:%d\n", key, x, y);
+	t_cub		*cub;
+
+	cub = (t_cub *)param;
+	if (key == 1)
+	{
+		cub->mouse_press = 0;
+		cub->last_mouse_grab = point(x, y);
 	}
 }
 
@@ -881,7 +925,8 @@ int	main(int argc, char **argv)
 	mlx_hook(cub->mlx_win, 2, (1L<<0), key_press, cub);
 	mlx_hook(cub->mlx_win, 9, (1L<<21), focus_in, cub);
 	mlx_hook(cub->mlx_win, 10, (1L<<21), focus_out, cub);
-	mlx_mouse_hook(cub->mlx_win, mouse_press, cub);
+	mlx_hook(cub->mlx_win, 4, (1L<<2), mouse_press, cub);
+	mlx_hook(cub->mlx_win, 5, (1L<<3), mouse_release, cub);
 	mlx_mouse_move(cub->mlx, cub->mlx_win, 500, 500);
 	//mlx_hook(cub->mlx_win, 4, 0, (int (*)())mouse_press, cub);
 	mlx_loop_hook(cub->mlx, frame, cub);

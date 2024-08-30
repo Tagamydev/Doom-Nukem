@@ -47,6 +47,8 @@ typedef struct s_cub
 	double			delta_time;
 	t_game_mode		game_mode;
 	int				focus;
+	int				mouse_press;
+	t_point			last_mouse_grab;
 
 	t_img			*tmp;
 
