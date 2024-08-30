@@ -710,8 +710,8 @@ t_point	mouse_pos_relative(t_cub *cub)
 	result.px = cub->last_mouse_grab.px - x;
 	result.py = cub->last_mouse_grab.py - y;
 
-	result.px = result.px * 100.0f / (float)cub->map_editor.screen_zoom;
-	result.py = result.py * 100.0f / (float)cub->map_editor.screen_zoom;
+	result.px = result.px * 100.0f / (float)(200.0f - cub->map_editor.screen_zoom);
+	result.py = result.py * 100.0f / (float)(200.0f - cub->map_editor.screen_zoom);
 	result.px += cub->map_editor.screen_center.px;
 	result.py += cub->map_editor.screen_center.py;
 	cub->last_mouse_grab = point(x, y);
@@ -794,10 +794,15 @@ int	mouse_press(int key, int x, int y, void *param)
 
 	if (cub->game_mode == EDITOR)
 	{
-		if (key == 4)
-			cub->map_editor.screen_zoom -= 10;
 		if (key == 5)
+			cub->map_editor.screen_zoom -= 10;
+		if (key == 4)
 			cub->map_editor.screen_zoom += 10;
+		if (cub->map_editor.screen_zoom <= 0)
+			cub->map_editor.screen_zoom = 10;
+		if (cub->map_editor.screen_zoom >= 150)
+			cub->map_editor.screen_zoom = 150;
+		printf("zoom:%d\n", cub->map_editor.screen_zoom);
 	}
 }
 int	mouse_release(int key, int x, int y, void *param)
