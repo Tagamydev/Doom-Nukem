@@ -715,8 +715,6 @@ t_point	mouse_pos_relative(t_cub *cub)
 	result.px += cub->map_editor.screen_center.px;
 	result.py += cub->map_editor.screen_center.py;
 	cub->last_mouse_grab = point(x, y);
-	//result.px = (int)result.px;
-	//result.py = (int)result.py;
 	return (result);
 }
 
