@@ -165,7 +165,7 @@ void	*default_node_free(void *ptr)
 
 //============================================= Draw circle in mlx_utils
 
-void	horizontal_line(int x0, int y0, int x1, t_img *img)
+void	horizontal_line(int x0, int y0, int x1, t_img *img, t_color color)
 {
 	int x;
 
@@ -173,16 +173,16 @@ void	horizontal_line(int x0, int y0, int x1, t_img *img)
 	while (x <= x1)
 	{
 		++x;
-		put_pixel(img, point(x, y0));
+		put_pixel(img, color_point(point(x, y0), color));
 	}
 
 }
 
-void	plot4points(int cx, int cy, int x, int y, t_img *img)
+void	plot4points(int cx, int cy, int x, int y, t_img *img, t_color color)
 {
-	horizontal_line(cx - x, cy + y, cx +x, img);
+	horizontal_line(cx - x, cy + y, cx +x, img, color);
 	if (y != 0)
-		horizontal_line(cx - x, cy - y, cx +x, img);
+		horizontal_line(cx - x, cy - y, cx +x, img, color);
 }
 			
 
@@ -208,11 +208,11 @@ void	draw_circle(int radius, t_img *img, t_point center)
 			lasty = y;
 			error += y++;
 			error += y;
-			plot4points(cx, cy, x, lasty, img);
+			plot4points(cx, cy, x, lasty, img, center.color);
 			if (error >= 0)	
 			{
 				if (x != lasty)
-					plot4points(cx, cy, lasty, x, img);
+					plot4points(cx, cy, lasty, x, img, center.color);
 				error -= x--;
 				error -= x;
 			}
@@ -294,7 +294,31 @@ t_map_editor	new_map_editor()
 
 //============================================= s_map in t_engine
 
+//                 normalize
+//this needs check
+t_point	ft_normalize(t_point point)
+{
+	t_point	result;
+	double	xd;
+	float	inv_sqr;
+
+	result = point;
+	xd = (point.px * point.px) + (point.py * point.py) + (point.pz * point.pz);
+	inv_sqr = 0;
+	if (xd)
+	{
+		inv_sqr = sqrt(xd);
+		inv_sqr = 1 / inv_sqr;
+	}
+	result.px = point.px * inv_sqr;
+	result.py = point.py * inv_sqr;
+	result.pz = point.pz * inv_sqr;
+	return (result);
+}
+//                 normalize
+
 //============================================== draw map editor in mlx_utils
+
 void	draw_normal(t_line line, t_img *img)
 {
 	t_point	p10;
@@ -305,7 +329,7 @@ void	draw_normal(t_line line, t_img *img)
 	p10 = line.a;
 	p10.px = line.b.px - line.a.px;
 	p10.py = line.b.py - line.a.py;
-	normal = normalize(point(-p10.py, p10.px));
+	normal = ft_normalize(point(-p10.py, p10.px));
 	p0.px = (line.a.px + line.b.px) * 0.5f;
 	p0.py = (line.a.py + line.b.py) * 0.5f;
 	p1.px = p0.px + normal.px * 12.0f;
@@ -341,7 +365,7 @@ t_point	remap_point(t_point pt, int zoom, t_point center, t_resolution res)
 	return(pt);
 }
 
-void	draw_segments(t_list segments, t_map_editor map_editor, t_img *img)
+void	draw_segments(t_list segments, t_map_editor map_editor, t_img *img, t_color color)
 {
 	t_node		*tmp;
 	t_segment	*tmp1;
@@ -356,6 +380,8 @@ void	draw_segments(t_list segments, t_map_editor map_editor, t_img *img)
 		tmp3 = tmp1->segment.b;
 		tmp2 = remap_point(tmp2, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
 		tmp3 = remap_point(tmp3, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+		tmp2 = color_point(tmp2, color);
+		tmp3 = color_point(tmp3, color);
 		draw_line(tmp2, tmp3, img);
 		draw_normal(line(tmp2, tmp3), img);
 		draw_circle(map_editor.screen_zoom / 20, img, tmp2);
@@ -594,16 +620,21 @@ t_game_mode	change_game_mode(t_game_mode mode)
 int	pause_mode(t_cub *cub)
 {
 	static	double	x = 100;
-	static	int		sign = -1;
+	static	int		sign = 1;
 
-	if (x > 200 || x < 100)
-		sign = -sign;
-	x += 100 * sign * cub->delta_time;
+	//if (x > 500.0f || x < 100.0f)
+	//	sign = -sign;
+	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(255, 0, 0)));
+	x += (float)100 * (float)sign * cub->delta_time;
+	//printf("x:%f\n", x);
 	cub->game_mode = PAUSE;
 	mlx_mouse_show(cub->mlx, cub->mlx_win);
-	fill_img(cub->tmp, color_from_rgb(255, 255, 255));
-	draw_circle(50, cub->tmp, point(x, 200));
+	ft_bzero(cub->tmp->data_addr, sizeof(int) * 1920 * 1080);
+	unsigned int i;
+
+	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(0, 0, 0)));
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
+	//mlx_do_sync(cub->mlx);
 	return (1);
 }
 
@@ -620,10 +651,14 @@ int	game_mode(t_cub *cub)
 
 int editor_mode(t_cub *cub)
 {
+	static	t_map_editor	last = {0};
+
 	cub->game_mode = EDITOR;
 	mlx_mouse_show(cub->mlx, cub->mlx_win);
-	fill_img(cub->tmp, color_from_rgb(255, 0, 0));
-	draw_segments(cub->segments, cub->map_editor, cub->tmp);
+	//fill_img(cub->tmp, color_from_rgb(255, 0, 0));
+	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(255, 0, 0));
+	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(0, 0, 0));
+	last = cub->map_editor;
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 }
 
@@ -633,15 +668,26 @@ int editor_mode(t_cub *cub)
 int	frame(void *p_cub)
 {
 	t_cub	*cub;
-	static	clock_t last = 0;
-	clock_t	now;
+	double	now;
+	static	double last_f;
+	static	int	last;
 
 
 	cub = (t_cub *)p_cub;
 	cub->frame += 1;
-	now = clock();
-	cub->delta_time = (double)(now - last) / CLOCKS_PER_SEC;
-	last = now;
+	now = (double)(clock() * 5) / CLOCKS_PER_SEC;
+	cub->delta_time = now - last_f;
+	last_f = now;
+	if ((int)now > last)
+	{
+		printf("fps:%d\n", cub->frame);
+		printf("last:%f\n", now);
+		cub->frame = 0;
+		last = now;
+	}
+	printf("delta_time:%f\n", cub->delta_time);
+	//cub->delta_time = 0.01;
+
 	if (cub->game_mode == GAME)
 		game_mode(cub);
 	else if (cub->game_mode == EDITOR)
@@ -667,13 +713,13 @@ int key_press_game(int key, t_cub *cub)
 int key_press_editor(int key, t_cub *cub)
 {
 	if (key == 65362)
-		cub->map_editor.screen_center.py += 100 * cub->delta_time;
+		cub->map_editor.screen_center.py += 10000 * cub->delta_time;
 	if (key == 65363)
-		cub->map_editor.screen_center.px -= 100 * cub->delta_time;
+		cub->map_editor.screen_center.px -= 10000 * cub->delta_time;
 	if (key == 65364)
-		cub->map_editor.screen_center.py -= 100 * cub->delta_time;
+		cub->map_editor.screen_center.py -= 10000 * cub->delta_time;
 	if (key == 65361)
-		cub->map_editor.screen_center.px += 100 * cub->delta_time;
+		cub->map_editor.screen_center.px += 10000 * cub->delta_time;
 
 }
 
@@ -759,6 +805,7 @@ int	main(int argc, char **argv)
 	cub->segments = new_segments;
 	
 	cub->map_editor = new_map_editor();
+	cub->game_mode = PAUSE;
 
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 
