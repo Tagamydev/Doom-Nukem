@@ -6,7 +6,7 @@
 /*   By: samusanc <samusanc@student.42madrid.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/08/04 22:32:43 by samusanc          #+#    #+#             */
-/*   Updated: 2024/08/10 23:48:26 by samusanc         ###   ########.fr       */
+/*   Updated: 2024/08/31 03:58:27 by samusanc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -379,27 +379,43 @@ t_point	remap_point(t_point pt, int zoom, t_point center, t_resolution res)
 	return(pt);
 }
 
+void	print_segment(t_segment *seg)
+{
+	float ax = seg->segment.a.px;
+	float ay = seg->segment.a.py;
+	float bx = seg->segment.b.px;
+	float by = seg->segment.b.py;
+	
+	printf("segment:%p (ax:%f, ay:%f), (bx:%f, by:%f)\n",seg, ax, ay, bx, by);
+}
+
+void	draw_segment(t_segment *tmp1, t_map_editor map_editor, t_img *img, t_color color)
+{
+	t_point		tmp2;
+	t_point		tmp3;
+
+	tmp2 = tmp1->segment.a;
+	tmp3 = tmp1->segment.b;
+	tmp2 = remap_point(tmp2, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+	tmp3 = remap_point(tmp3, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+	tmp2 = color_point(tmp2, color);
+	tmp3 = color_point(tmp3, color);
+	draw_line(tmp2, tmp3, img);
+	draw_normal(line(tmp2, tmp3), img);
+	draw_circle(map_editor.screen_zoom / 20, img, tmp2);
+	draw_circle(map_editor.screen_zoom / 20, img, tmp3);
+}
+
 void	draw_segments(t_list segments, t_map_editor map_editor, t_img *img, t_color color)
 {
 	t_node		*tmp;
 	t_segment	*tmp1;
-	t_point		tmp2;
-	t_point		tmp3;
 
 	tmp = segments.head;
 	while (tmp)
 	{
 		tmp1 = (t_segment *)tmp->content;
-		tmp2 = tmp1->segment.a;
-		tmp3 = tmp1->segment.b;
-		tmp2 = remap_point(tmp2, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
-		tmp3 = remap_point(tmp3, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
-		tmp2 = color_point(tmp2, color);
-		tmp3 = color_point(tmp3, color);
-		draw_line(tmp2, tmp3, img);
-		draw_normal(line(tmp2, tmp3), img);
-		draw_circle(map_editor.screen_zoom / 20, img, tmp2);
-		draw_circle(map_editor.screen_zoom / 20, img, tmp3);
+		draw_segment(tmp1, map_editor, img, color);
 		tmp = tmp->next;
 	}
 }
@@ -408,10 +424,27 @@ void	draw_segments(t_list segments, t_map_editor map_editor, t_img *img, t_color
 
 //=============================================BSP IN ENGINE
 
+typedef struct s_bbox_2d
+{
+	t_line	a;
+	t_line	b;
+}				t_bbox_2d;
+
+t_bbox_2d	bbox_2d()
+{
+	t_bbox_2d	result;
+
+	result.a = line(point(0, 0), point(0, 0));
+	result.b = line(point(0, 0), point(0, 0));
+	return (result);
+}
+
 typedef struct s_bsp
 {
 	struct s_bsp	*front;
+	t_bbox_2d		front_bbox;
 	struct s_bsp	*back;
+	t_bbox_2d		back_bbox;
 	t_segment		*splitter;
 	int				id;
 }				t_bsp;
@@ -465,12 +498,13 @@ int	split_segments(t_list *front, t_list *back, t_list segments, t_bsp *nd, t_li
 	t_segment	*r_segment;
 	t_segment	*l_segment;
 	t_segment	*third_segment;
+	int			split;
 
 	splitter_seg = (t_segment *)segments.head->content;
 	nd->splitter = malloc(sizeof(t_segment));
 	if (!nd->splitter)
 		return ;
-	ft_memcpy(nd->splitter, split_segments, sizeof(t_segment));
+	ft_memcpy(nd->splitter, splitter_seg, sizeof(t_segment));
 	tmp = segments.head;
 	while (tmp->next)
 	{
@@ -486,6 +520,8 @@ int	split_segments(t_list *front, t_list *back, t_list segments, t_bsp *nd, t_li
 
 		denominator_is_zero = ft_abs(denominator) < EPS;
 		numerator_is_zero = ft_abs(numerator) < EPS;
+
+		split = 0;
 
 		if (denominator_is_zero && numerator_is_zero)
 		{
@@ -515,31 +551,80 @@ int	split_segments(t_list *front, t_list *back, t_list segments, t_bsp *nd, t_li
 				}
 				list_push_f(front, node(r_segment, &default_node_free));
 				list_push_f(back, node(l_segment, &default_node_free));
+				split = 1;
 			}
 		}
-		if (numerator < 0 || (numerator_is_zero && denominator > 0))
+		if (!split)
 		{
-			content_tmp = malloc(sizeof(t_segment));
-			if (content_tmp)
+			if (numerator < 0 || (numerator_is_zero && denominator > 0))
 			{
-				ft_memcpy(content_tmp, seg_tmp, sizeof(t_segment));
-				list_push_f(front, node(content_tmp, &default_node_free));
+				content_tmp = malloc(sizeof(t_segment));
+				if (content_tmp)
+				{
+					ft_memcpy(content_tmp, seg_tmp, sizeof(t_segment));
+					list_push_f(front, node(content_tmp, &default_node_free));
+				}
+			}
+			else if (numerator > 0 || (numerator_is_zero && denominator < 0))
+			{
+				content_tmp = malloc(sizeof(t_segment));
+				if (content_tmp)
+				{
+					ft_memcpy(content_tmp, seg_tmp, sizeof(t_segment));
+					list_push_f(back, node(content_tmp, &default_node_free));
+				}
 			}
 		}
-		else if (numerator > 0 || (numerator_is_zero && denominator < 0))
-		{
-			content_tmp = malloc(sizeof(t_segment));
-			if (content_tmp)
-			{
-				ft_memcpy(content_tmp, seg_tmp, sizeof(t_segment));
-				list_push_f(back, node(content_tmp, &default_node_free));
-			}
-		}
+		//else
+			//print_segment(front->head->content);
+		//print_segment(splitter_seg);
+		//print_segment(front->head->content);
+		//exit(0);
 
 	}
-	if (!((front && front->head )|| (back && back->head)))
-		ss_add_segment(*splitter_seg, new_segments, nd);
+
+	//if (!((front && front->head )|| (back && back->head)))
+	ss_add_segment(*splitter_seg, new_segments, nd);
 	return (1);
+}
+
+
+t_bbox_2d	easy_bbox_2d(t_segment *split, t_list *segments)
+{
+	t_bbox_2d	result;
+	t_line		bound;
+
+	bound = get_bounds(segments);
+	result.a = line(point(bound.a.px, bound.a.py), point(bound.a.px, bound.b.py));
+	result.b = line(point(bound.b.px, bound.a.py), point(bound.b.px, bound.b.py));
+	return (result);
+}
+
+t_bbox_2d	hard_bbox_2d(t_segment *split, t_list *segments)
+{
+	double	angle;
+
+	angle = (atan2(split->segment.b.py - split->segment.a.py, 
+	split->segment.b.px - split->segment.a.px));
+	angle = angle * (180.0 / PI);
+	if (angle < 0)
+		angle += 360.0;
+	printf("angle:%f\n", angle);
+	return (bbox_2d());
+}
+
+t_bbox_2d	get_bbox_2d(t_segment *split, t_list *segments)
+{
+	t_bbox_2d	result;
+
+	result = bbox_2d();
+	if (!split || !segments || !segments->head)
+		return (result);
+	if (split->segment.a.px == split->segment.b.px ||
+	split->segment.a.py == split->segment.b.py)
+		return (easy_bbox_2d(split, segments));
+	else
+		return (hard_bbox_2d(split, segments));
 }
 
 t_bsp	*build_bsp(t_list segments, t_list *new_segments);
@@ -561,9 +646,15 @@ t_bsp	*build_bsp(t_list segments, t_list *new_segments)
 		return (NULL);
 
 	if (front.head)
+	{
 		result->front = build_bsp(front, new_segments);
+		result->front_bbox = get_bbox_2d(result->splitter, &front);
+	}
 	if (back.head)
+	{
 		result->back = build_bsp(back, new_segments);
+		result->back_bbox = get_bbox_2d(result->splitter, &back);
+	}
 
 	list_clear(&front);
 	list_clear(&back);
@@ -607,7 +698,8 @@ t_player	*new_player(t_camera *camera)
 	result = malloc(sizeof(t_player));
 	if (!result)
 		return (NULL);
-	result->camera = new_camera(point(0, 0), 90, 90, NULL);
+	if (!camera)
+		result->camera = new_camera(point(0, 0), 90, 90, NULL);
 	result->update = NULL;
 	result->start = NULL;
 	if (!result->camera)
@@ -626,9 +718,7 @@ t_game_mode	change_game_mode(t_game_mode mode)
 	if (mode == LAST)
 		return (last);
 	else
-	{
 		return (mode);
-	}
 }
 
 int	pause_mode(t_cub *cub)
@@ -638,17 +728,14 @@ int	pause_mode(t_cub *cub)
 
 	if (cub->game_mode != PAUSE)
 		fill_img(cub->tmp, color_from_rgb(255, 0, 0));
-	cub->game_mode = PAUSE;
+	cub->game_mode = change_game_mode(PAUSE);
 
 	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(255, 0, 0)));
 	x += (float)100 * (float)sign * cub->delta_time;
-	//printf("x:%f\n", x);
 	mlx_mouse_show(cub->mlx, cub->mlx_win);
-	unsigned int i;
 
 	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(255, 255, 255)));
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
-	//mlx_do_sync(cub->mlx);
 	return (1);
 }
 
@@ -657,8 +744,6 @@ int	game_mode(t_cub *cub)
 	if (cub->game_mode != GAME)
 		fill_img(cub->tmp, color_from_rgb(255, 0, 255));
 	cub->game_mode = GAME;
-	if (!cub->focus)
-		return (pause_mode(cub));
 	mlx_mouse_hide(cub->mlx, cub->mlx_win);
 	mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
@@ -718,6 +803,56 @@ t_point	mouse_pos_relative(t_cub *cub)
 	return (result);
 }
 
+int	draw_bbox(t_bbox_2d bbox, t_map_editor map_editor, t_color color, t_img *img)
+{
+	t_point	p1;
+	t_point	p2;
+	t_point	p3;
+	t_point	p4;
+
+	p1 = bbox.a.a;
+	p2 = bbox.a.b;
+	p3 = bbox.b.a;
+	p4 = bbox.b.b;
+
+	p1 = remap_point(p1, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+	p2 = remap_point(p2, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+	p3 = remap_point(p3, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+	p4 = remap_point(p4, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+
+	p1.color = color;
+	p2.color = color;
+	p3.color = color;
+	p4.color = color;
+
+	draw_line(p1, p2, img);
+	draw_line(p2, p4, img);
+	draw_line(p3, p4, img);
+	draw_line(p3, p1, img);
+}
+
+int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col)
+{
+	t_bsp	*root;
+
+	root = cub->root_node;
+	//root = root->front;
+	if (root)
+	{
+		draw_segment(root->splitter, map_editor, cub->tmp, col);
+		if (col.hex != color(BLACK).hex)
+		{
+			draw_bbox(root->back_bbox, map_editor, color(RED), cub->tmp);
+			draw_bbox(root->front_bbox, map_editor, color(GREEN), cub->tmp);
+		}
+		else
+		{
+			draw_bbox(root->back_bbox, map_editor, col, cub->tmp);
+			draw_bbox(root->front_bbox, map_editor, col, cub->tmp);
+		}
+	}
+}
+
 int editor_mode(t_cub *cub)
 {
 	static t_map_editor	last = {0};
@@ -731,7 +866,9 @@ int editor_mode(t_cub *cub)
 	draw_grid(last, cub->tmp, color_from_rgb(0, 0, 0));
 	draw_grid(cub->map_editor, cub->tmp, color_from_rgb(100, 100, 100));
 	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(0, 0, 0));
-	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(255, 255, 255));
+	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(50, 50, 50));
+	draw_bsp(cub, last, color(BLACK));
+	draw_bsp(cub, cub->map_editor, color(WHITE));
 	last = cub->map_editor;
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 }
@@ -766,12 +903,12 @@ int	frame(void *p_cub)
 	//printf("delta_time:%f\n", cub->delta_time);
 	//cub->delta_time = 0.01;
 
+	if (!cub->focus)
+		pause_mode(cub);
 	if (cub->game_mode == GAME)
 		game_mode(cub);
 	else if (cub->game_mode == EDITOR)
 		editor_mode(cub);
-	else if (cub->game_mode == PAUSE)
-		pause_mode(cub);
 
 	//block mouse in play mode
 	//printf("frame:%d\n", cub->frame);
@@ -847,6 +984,7 @@ int	key_press(int key, void *param)
 		else
 			return (game_mode(cub));
 	}
+
 	if (cub->game_mode == GAME)
 		key_press_game(key, cub);
 	if (cub->game_mode == EDITOR)
@@ -893,15 +1031,15 @@ int	main(int argc, char **argv)
 	t_list	segments;
 
 	segments = list(NULL);
+	list_push_b(&segments, node(segment(line(point(3, 6), point(5, 6))), &default_node_free));//easy
 	list_push_b(&segments, node(segment(line(point(0, 0), point(7, 1))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(7, 1), point(7, 8))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(7, 8), point(1, 8))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(1, 8), point(0, 0))), &default_node_free));
 
-	list_push_b(&segments, node(segment(line(point(2, 4), point(2, 3))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(2, 3), point(5, 5))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(5, 5), point(3, 6))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(3, 6), point(2, 4))), &default_node_free));
+	list_push_b(&segments, node(segment(line(point(5, 6), point(2, 3))), &default_node_free));//hard
+	list_push_b(&segments, node(segment(line(point(2, 4), point(3, 6))), &default_node_free));
+	list_push_b(&segments, node(segment(line(point(2, 3), point(2, 4))), &default_node_free));
 
 	t_map_editor map_edit;
 
@@ -917,6 +1055,7 @@ int	main(int argc, char **argv)
 	
 	cub->map_editor = new_map_editor();
 	cub->game_mode = PAUSE;
+	cub->player = new_player(NULL);
 
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 
