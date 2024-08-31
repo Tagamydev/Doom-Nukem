@@ -1091,36 +1091,59 @@ int	intersection_check(t_line a, t_line b)
 		return (1);
 	return (0);
 	*/
-int sat_bbox_2d(t_bbox_2d a, t_bbox_2d b)
+
+int is_point_in_triangle(t_point pt, t_line *vertex)
 {
+	int	result;
+	int	num_vertex;
+	int	i;
+	t_point	vi;
+	t_point	vj;
 
-}
+	num_vertex = 3;
+	result = 0;
+	i = 0;
+	while (i < num_vertex)
+	{
+		vi = vertex[i].a;
+		vj = vertex[i].b;
 
-float	get_angle_two_points(t_point pt1, t_point pt2)
-{
-	float	angle;
-
-	angle = (atan2(pt2.py - pt1.py, 
-	pt2.px - pt1.px));
-	angle = angle * (180.0 / PI);
-	/*
-	if (angle < 0)
-		angle += 360.0;
-	if (angle > 359.0)
-		angle -= 360.0;
-		*/
-	return (angle);
-}
-
-int	is_in_range(float min, float max, float value)
-{
-	if (value > min && value < max)
-		return (1);
-	return (0);
+		if ((vi.py > pt.py) != (vj.py > pt.py) && 
+            (pt.px < (vj.px - vi.px) * (pt.py - vi.py) / (vj.py - vi.py) + vi.px))
+			result != result;
+		i++;
+	}
+	return (result);
 }
 
 int	this_bbox_intersect(t_cub *cub, t_bbox_2d bbox)
 {
+	t_line	v1;
+	t_line	v2;
+	t_line	v3;
+	t_line	vertex[3];
+	t_point	max_fov1;
+	t_point	max_fov2;
+
+	max_fov1.px = cub->player->camera->pos.px + (100.0 * cub->fov1_deltas.px);
+	max_fov1.py = cub->player->camera->pos.py + (100.0 * cub->fov1_deltas.py);
+	max_fov2.px = cub->player->camera->pos.px + (100.0 * cub->fov2_deltas.px);
+	max_fov2.py = cub->player->camera->pos.py + (100.0 * cub->fov2_deltas.py);
+	v1 = line(cub->player->camera->pos, max_fov1);
+	v2 = line(cub->player->camera->pos, max_fov2);
+	v3 = line(max_fov1, max_fov2);
+	vertex[0] = v1;
+	vertex[1] = v2;
+	vertex[2] = v3;
+	if (is_point_in_triangle(bbox.a.a, vertex))
+		return (1);
+	if (is_point_in_triangle(bbox.a.b, vertex))
+		return (1);
+	if (is_point_in_triangle(bbox.b.a, vertex))
+		return (1);
+	if (is_point_in_triangle(bbox.b.b, vertex))
+		return (1);
+	return (0);
 }
 
 int	is_player_in_front(t_point pt, t_bsp *node)
