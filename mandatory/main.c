@@ -6,7 +6,7 @@
 /*   By: samusanc <samusanc@student.42madrid.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/08/04 22:32:43 by samusanc          #+#    #+#             */
-/*   Updated: 2024/08/31 03:58:27 by samusanc         ###   ########.fr       */
+/*   Updated: 2024/08/31 18:25:33 by samusanc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -891,7 +891,7 @@ int	draw_bbox(t_bbox_2d bbox, t_map_editor map_editor, t_color color, t_img *img
 	draw_line(p3, p1, img);
 }
 
-int	draw_bsp_node(t_bsp *node, t_cub *cub, t_map_editor map_editor, t_color col)
+int	draw_bsp_node(t_bsp *node, t_cub *cub, t_map_editor map_editor, t_color col, int mode)
 {
 	if (node)
 	{
@@ -906,54 +906,273 @@ int	draw_bsp_node(t_bsp *node, t_cub *cub, t_map_editor map_editor, t_color col)
 			draw_bbox(node->back_bbox, map_editor, col, cub->tmp);
 			draw_bbox(node->front_bbox, map_editor, col, cub->tmp);
 		}
-		/*
-		if (node->front)
-			draw_bsp_node(node->front, cub, map_editor, col);
-		if (node->back)
-			draw_bsp_node(node->back, cub, map_editor, col);
-			*/
+		if (!mode)
+		{
+			if (node->front)
+				draw_bsp_node(node->front, cub, map_editor, col, mode);
+			if (node->back)
+				draw_bsp_node(node->back, cub, map_editor, col, mode);
+		}
 	}
 }
 
-int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col)
+int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col, int mode)
 {
 	static	t_bsp	*root = NULL;
 	static	t_bsp	*last_root = NULL;
 	static	float	frame = 0;
+	t_bsp			*tmp_root;
 
-	frame += cub->delta_time;
-	if (!root)
+	if (mode)
 	{
-		root = cub->root_node;
-		frame = 0;
-	}
-	if (root)
-	{
-		if (last_root)
-			draw_bsp_node(last_root, cub, map_editor, color(BLACK));
-		draw_bsp_node(root, cub, map_editor, col);
-		if (frame > 10)
+		frame += cub->delta_time;
+		if (!root)
 		{
-			last_root = root;
-			root = root->front;
+			root = cub->root_node;
 			frame = 0;
 		}
+		if (root)
+		{
+			if (last_root)
+				draw_bsp_node(last_root, cub, map_editor, color(BLACK), mode);
+			draw_bsp_node(root, cub, map_editor, col, mode);
+			if (frame > 10)
+			{
+				last_root = root;
+				root = root->front;
+				frame = 0;
+			}
+		}
+	}
+	else
+	{
+		tmp_root = cub->root_node;
+
+		if (tmp_root)
+			draw_bsp_node(tmp_root, cub, map_editor, col, mode);
 	}
 }
 
 int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
 {
+	// para comprobar la bbox del player y un sector simplemente saca el angulo entre el player y el pt medio del sector
 	static	t_point	last_pos = {0};
+	static	t_point	last_fov1 = {0};
+	static	t_point	last_fov2 = {0};
 	t_point	pos;
+	t_point	fov1;
+	t_point	fov2;
 
 	pos = cub->player->camera->pos;
-	//printf("player x:%f, player y:%f\n", pos.px, pos.py);
+
+	fov1 = point(pos.px + (3.0  * cub->fov1_deltas.px), 
+	pos.py + (3.0  * cub->fov1_deltas.py));
+
+	fov2 = point(pos.px + (3.0  * cub->fov2_deltas.px), 
+	pos.py + (3.0  * cub->fov2_deltas.py));
+
+
 	pos = remap_point(pos, map_editor.screen_zoom, map_editor.screen_center, cub->tmp->resolution);
+	fov1 = remap_point(fov1, map_editor.screen_zoom, map_editor.screen_center, cub->tmp->resolution);
+	fov2 = remap_point(fov2, map_editor.screen_zoom, map_editor.screen_center, cub->tmp->resolution);
+
 	pos.px = (int)pos.px;
 	pos.py = (int)pos.py;
 	draw_circle(5, cub->tmp, color_point(last_pos, color(BLACK)));
 	draw_circle(5, cub->tmp, color_point(pos, col));
+
+	draw_line(last_pos, last_fov1, cub->tmp);
+	draw_line(last_pos, last_fov2, cub->tmp);
+
 	last_pos = pos;
+	last_fov1 = fov1;
+	last_fov2 = fov2;
+
+	pos.color = col;
+	fov1.color = col;
+	fov2.color = col;
+
+	draw_line(pos, fov1, cub->tmp);
+	draw_line(pos, fov2, cub->tmp);
+}
+
+t_line	bbox_intersect_make_fov(t_point delta, t_point pos)
+{
+	t_line	result;
+
+	result = line(
+	pos,  
+	point(pos.px + (delta.px * 20.0f), pos.py + (delta.py * 20.0f))
+	);
+	return (result);
+}
+
+int	get_orientation_pt(t_point a, t_point b, t_point c)
+{
+	int	val;
+
+	val = ((b.py - a.py) * (c.px - b.px) - (b.px - a.px) * (c.py - b.py));
+	if (!val)
+		return (0);
+	else if (val > 0)
+		return (1);
+	return (2);
+}
+
+int on_segment(t_point a, t_point b, t_point c)
+{
+	if (b.px <= fmax(a.px, c.px) && b.px >= fmin(a.px, c.px) &&
+		b.py <= fmax(a.py, c.py) && b.py >= fmin(a.py, c.py))
+		return (1);
+	return (0);
+}
+
+int	intersection_check(t_line a, t_line b)
+{
+	int	o1;
+	int o2;
+	int	o3;
+	int	o4;
+
+	o1 = get_orientation_pt(a.a, a.b, b.a);
+	o2 = get_orientation_pt(a.a, a.b, b.b);
+	o3 = get_orientation_pt(b.a, b.b, a.a);
+	o4 = get_orientation_pt(b.a, b.b, a.b);
+
+	if (o1 != o2 && o3 != o4)
+		return (1);
+	if (o1 == 0 && on_segment(a.a, b.a, a.b))
+		return (1);
+	if (o2 == 0 && on_segment(a.a, b.b, a.b))
+		return (1);
+	if (o3 == 0 && on_segment(b.a, a.a, b.b))
+		return (1);
+	if (o4 == 0 && on_segment(b.a, a.b, b.b))
+		return (1);
+	return (0);
+}
+
+	/*
+	t_player	*player;
+	t_line		fov_1;
+	t_line		fov_2;
+	t_line		up;
+	t_line		down;
+	t_line		left;
+	t_line		right;
+
+	player = cub->player;
+	fov_1 = bbox_intersect_make_fov(cub->fov1_deltas, player->camera->pos);
+	fov_2 = bbox_intersect_make_fov(cub->fov2_deltas, player->camera->pos);
+
+	t_point	p1;
+	t_point	p2;
+	t_point	p3;
+	t_point	p4;
+
+	p1 = bbox.a.a;
+	p2 = bbox.a.b;
+	p3 = bbox.b.a;
+	p4 = bbox.b.b;
+
+	up = line(p1, p2);
+	down = line(p2, p4);
+	left = line(p3, p4);
+	right = line(p3, p1);
+
+	if (intersection_check(fov_1, up) || intersection_check(fov_2, up))
+		return (1);
+	if (intersection_check(fov_1, down) || intersection_check(fov_2, down))
+		return (1);
+	if (intersection_check(fov_1, left) || intersection_check(fov_2, left))
+		return (1);
+	if (intersection_check(fov_1, right) || intersection_check(fov_2, right))
+		return (1);
+	return (0);
+	*/
+int	this_bbox_intersect(t_cub *cub, t_bbox_2d bbox)
+{
+	t_player	*player;
+	t_line		fov_1;
+	t_line		fov_2;
+	t_line		up;
+	t_line		down;
+	t_line		left;
+	t_line		right;
+
+	player = cub->player;
+	fov_1 = bbox_intersect_make_fov(cub->fov1_deltas, player->camera->pos);
+	fov_2 = bbox_intersect_make_fov(cub->fov2_deltas, player->camera->pos);
+
+	t_point	p1;
+	t_point	p2;
+	t_point	p3;
+	t_point	p4;
+
+	p1 = bbox.a.a;
+	p2 = bbox.a.b;
+	p3 = bbox.b.a;
+	p4 = bbox.b.b;
+
+	up = line(p1, p2);
+	down = line(p2, p4);
+	left = line(p3, p4);
+	right = line(p3, p1);
+
+	if (intersection_check(fov_1, up) || intersection_check(fov_2, up))
+		return (1);
+	if (intersection_check(fov_1, down) || intersection_check(fov_2, down))
+		return (1);
+	if (intersection_check(fov_1, left) || intersection_check(fov_2, left))
+		return (1);
+	if (intersection_check(fov_1, right) || intersection_check(fov_2, right))
+		return (1);
+	return (0);
+}
+
+int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col)
+{
+	if (node)
+	{
+		if (this_bbox_intersect(cub, node->front_bbox))
+		{
+			draw_segment(node->splitter, map_editor, cub->tmp, col);
+			/*
+			if (col.hex != color(BLACK).hex)
+				draw_bbox(node->front_bbox, map_editor, color(GREEN), cub->tmp);
+			else
+				draw_bbox(node->front_bbox, map_editor, color(BLACK), cub->tmp);
+				*/
+		}
+		else if (this_bbox_intersect(cub, node->back_bbox))
+		{
+			draw_segment(node->splitter, map_editor, cub->tmp, col);
+			/*
+			if (col.hex != color(BLACK).hex)
+				draw_bbox(node->front_bbox, map_editor, color(GREEN), cub->tmp);
+			else
+				draw_bbox(node->front_bbox, map_editor, color(BLACK), cub->tmp);
+				*/
+		}
+		else
+		{
+			if (col.hex != color(BLACK).hex)
+				draw_bbox(node->front_bbox, map_editor, color(GREEN), cub->tmp);
+			else
+				draw_bbox(node->front_bbox, map_editor, color(BLACK), cub->tmp);
+		}
+		if (node->front)
+			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col);
+		if (node->back)
+			draw_bsp_segment_by_bbox(cub, node->back, map_editor, col);
+	}
+
+}
+
+int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
+{
+	if (cub->root_node)
+		draw_bsp_segment_by_bbox(cub, cub->root_node, map_editor, col);
 }
 
 int editor_mode(t_cub *cub)
@@ -970,8 +1189,13 @@ int editor_mode(t_cub *cub)
 	draw_grid(cub->map_editor, cub->tmp, color_from_rgb(100, 100, 100));
 	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(0, 0, 0));
 	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(50, 50, 50));
-//	draw_bsp(cub, last, color(BLACK));
-//	draw_bsp(cub, cub->map_editor, color(WHITE));
+
+	//draw_bsp(cub, last, color(BLACK), 0);
+	//draw_bsp(cub, cub->map_editor, color(WHITE), 0);
+
+	draw_fov_intersection(cub, last, color(BLACK));
+	draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255));
+
 	draw_player(cub, last, color(BLACK));
 	draw_player(cub, cub->map_editor, color_from_rgb(255, 255, 0));
 	last = cub->map_editor;
@@ -1076,6 +1300,34 @@ int key_press_editor(int key, t_cub *cub)
 
 }
 
+int	calculate_deltas(t_player *player, t_point *deltas, t_point *fov1, t_point *fov2)
+{
+	float	angle;
+	float	fov;
+
+	if (player)
+	{
+		angle = player->camera->angle;
+		fov = player->camera->fov;
+		fov = fov / 2.0f;
+		deltas->px = cos(deg2_rad(angle));
+		deltas->py = sin(deg2_rad(angle));
+		fov1->px = cos(deg2_rad(angle - fov));
+		fov1->py = sin(deg2_rad(angle - fov));
+		fov2->px = cos(deg2_rad(angle + fov));
+		fov2->py = sin(deg2_rad(angle + fov));
+	}
+}
+
+int	update_player_angle(t_player *player, t_point *deltas, t_point *fov1, t_point *fov2, float angle)
+{
+	if (player)
+	{
+		player->camera->angle = fix_angle(angle);
+		calculate_deltas(player, deltas, fov1, fov2);
+	}
+}
+
 int	key_press(int key, void *param)
 {
 	t_cub		*cub;
@@ -1091,17 +1343,30 @@ int	key_press(int key, void *param)
 	}
 	if (key == 44)
 	{
-	//	printf("this is stupid\n");
-		cub->player->camera->pos.px += 1.0 * cub->delta_time;
-		cub->player->camera->pos.py += 1.0 * cub->delta_time;	
+		cub->player->camera->pos.px += 1.0 * cub->p_deltas.px * cub->delta_time;
+		cub->player->camera->pos.py += 1.0 * cub->p_deltas.py * cub->delta_time;	
 	}
 	if (key == 111)
 	{
-		//printf("this is stupid\n");
-		cub->player->camera->pos.px -= 1.0 * cub->delta_time;
-		cub->player->camera->pos.py -= 1.0 * cub->delta_time;
+		cub->player->camera->pos.px -= 1.0 * cub->p_deltas.px * cub->delta_time;
+		cub->player->camera->pos.py -= 1.0 * cub->p_deltas.py * cub->delta_time;	
 	}
-
+	if (key == 97)
+	{
+		cub->player->camera->pos.px += 1.0 * cub->p_deltas.py * cub->delta_time;
+		cub->player->camera->pos.py -= 1.0 * cub->p_deltas.px * cub->delta_time;	
+	}
+	if (key == 101)
+	{
+		cub->player->camera->pos.px -= 1.0 * cub->p_deltas.py * cub->delta_time;
+		cub->player->camera->pos.py += 1.0 * cub->p_deltas.px * cub->delta_time;	
+	}
+	if (key == 46)
+		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 
+		cub->player->camera->angle + 100.0 * cub->delta_time);
+	if (key == 39)
+		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 
+		cub->player->camera->angle - 100.0 * cub->delta_time);
 	if (cub->game_mode == GAME)
 		key_press_game(key, cub);
 	if (cub->game_mode == EDITOR)
@@ -1114,7 +1379,6 @@ int	focus_in(void *param)
 
 	cub = (t_cub *)param;
 	cub->focus = 1;
-	printf("this is focus\n");
 }
 
 int	focus_out(void *param)
@@ -1123,8 +1387,6 @@ int	focus_out(void *param)
 
 	cub = (t_cub *)param;
 	cub->focus = 0;
-
-	printf("this is not focus\n");
 }
 
 int	main(int argc, char **argv)
@@ -1173,6 +1435,8 @@ int	main(int argc, char **argv)
 	cub->map_editor = new_map_editor();
 	cub->game_mode = PAUSE;
 	cub->player = new_player(NULL);
+	cub->player->camera->angle = 45;
+	calculate_deltas(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas);
 
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 

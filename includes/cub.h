@@ -59,7 +59,12 @@ typedef struct s_cub
 	t_color			floor;
 	t_color			celling;
 	char			**map;
+
+	// PLAYER
 	t_player		*player;
+	t_point			p_deltas;
+	t_point			fov1_deltas;
+	t_point			fov2_deltas;
 
 
 	t_bsp			*root_node;
