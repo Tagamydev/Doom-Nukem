@@ -785,7 +785,8 @@ int	pause_mode(t_cub *cub)
 	static	int		sign = 1;
 
 	if (cub->game_mode != PAUSE)
-		fill_img(cub->tmp, color_from_rgb(255, 0, 0));
+		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
+		//fill_img(cub->tmp, color_from_rgb(255, 0, 0));
 	cub->game_mode = change_game_mode(PAUSE);
 
 	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(255, 0, 0)));
@@ -800,7 +801,8 @@ int	pause_mode(t_cub *cub)
 int	game_mode(t_cub *cub)
 {
 	if (cub->game_mode != GAME)
-		fill_img(cub->tmp, color_from_rgb(255, 0, 255));
+		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
+		//fill_img(cub->tmp, color_from_rgb(255, 0, 255));
 	cub->game_mode = GAME;
 	mlx_mouse_hide(cub->mlx, cub->mlx_win);
 	mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
@@ -889,26 +891,69 @@ int	draw_bbox(t_bbox_2d bbox, t_map_editor map_editor, t_color color, t_img *img
 	draw_line(p3, p1, img);
 }
 
-int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col)
+int	draw_bsp_node(t_bsp *node, t_cub *cub, t_map_editor map_editor, t_color col)
 {
-	t_bsp	*root;
-
-	root = cub->root_node;
-	//root = root->front;
-	if (root)
+	if (node)
 	{
-		draw_segment(root->splitter, map_editor, cub->tmp, col);
+		draw_segment(node->splitter, map_editor, cub->tmp, col);
 		if (col.hex != color(BLACK).hex)
 		{
-			draw_bbox(root->back_bbox, map_editor, color(RED), cub->tmp);
-			draw_bbox(root->front_bbox, map_editor, color(GREEN), cub->tmp);
+			draw_bbox(node->back_bbox, map_editor, color(RED), cub->tmp);
+			draw_bbox(node->front_bbox, map_editor, color(GREEN), cub->tmp);
 		}
 		else
 		{
-			draw_bbox(root->back_bbox, map_editor, col, cub->tmp);
-			draw_bbox(root->front_bbox, map_editor, col, cub->tmp);
+			draw_bbox(node->back_bbox, map_editor, col, cub->tmp);
+			draw_bbox(node->front_bbox, map_editor, col, cub->tmp);
+		}
+		/*
+		if (node->front)
+			draw_bsp_node(node->front, cub, map_editor, col);
+		if (node->back)
+			draw_bsp_node(node->back, cub, map_editor, col);
+			*/
+	}
+}
+
+int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col)
+{
+	static	t_bsp	*root = NULL;
+	static	t_bsp	*last_root = NULL;
+	static	float	frame = 0;
+
+	frame += cub->delta_time;
+	if (!root)
+	{
+		root = cub->root_node;
+		frame = 0;
+	}
+	if (root)
+	{
+		if (last_root)
+			draw_bsp_node(last_root, cub, map_editor, color(BLACK));
+		draw_bsp_node(root, cub, map_editor, col);
+		if (frame > 10)
+		{
+			last_root = root;
+			root = root->front;
+			frame = 0;
 		}
 	}
+}
+
+int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
+{
+	static	t_point	last_pos = {0};
+	t_point	pos;
+
+	pos = cub->player->camera->pos;
+	//printf("player x:%f, player y:%f\n", pos.px, pos.py);
+	pos = remap_point(pos, map_editor.screen_zoom, map_editor.screen_center, cub->tmp->resolution);
+	pos.px = (int)pos.px;
+	pos.py = (int)pos.py;
+	draw_circle(5, cub->tmp, color_point(last_pos, color(BLACK)));
+	draw_circle(5, cub->tmp, color_point(pos, col));
+	last_pos = pos;
 }
 
 int editor_mode(t_cub *cub)
@@ -925,8 +970,10 @@ int editor_mode(t_cub *cub)
 	draw_grid(cub->map_editor, cub->tmp, color_from_rgb(100, 100, 100));
 	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(0, 0, 0));
 	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(50, 50, 50));
-	draw_bsp(cub, last, color(BLACK));
-	draw_bsp(cub, cub->map_editor, color(WHITE));
+//	draw_bsp(cub, last, color(BLACK));
+//	draw_bsp(cub, cub->map_editor, color(WHITE));
+	draw_player(cub, last, color(BLACK));
+	draw_player(cub, cub->map_editor, color_from_rgb(255, 255, 0));
 	last = cub->map_editor;
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 }
@@ -1042,6 +1089,18 @@ int	key_press(int key, void *param)
 		else
 			return (game_mode(cub));
 	}
+	if (key == 44)
+	{
+	//	printf("this is stupid\n");
+		cub->player->camera->pos.px += 1.0 * cub->delta_time;
+		cub->player->camera->pos.py += 1.0 * cub->delta_time;	
+	}
+	if (key == 111)
+	{
+		//printf("this is stupid\n");
+		cub->player->camera->pos.px -= 1.0 * cub->delta_time;
+		cub->player->camera->pos.py -= 1.0 * cub->delta_time;
+	}
 
 	if (cub->game_mode == GAME)
 		key_press_game(key, cub);
@@ -1083,7 +1142,7 @@ int	main(int argc, char **argv)
 	//================================================================================
 
 	cub->tmp = init_img(cub->mlx, resolution(1920, 1080));
-	fill_img(cub->tmp, color(red));
+	fill_img(cub->tmp, color(BLACK));
 
 	// this part is parsing one map ======================================================
 	t_list	segments;
@@ -1122,6 +1181,8 @@ int	main(int argc, char **argv)
 		write(2, "Error: cannot initialize the general struct\n", 45);
 		return (-1);
 	}
+	cub->player->camera->pos.px = 2;
+	cub->player->camera->pos.py = 2;
 	mlx_hook(cub->mlx_win, 2, (1L<<0), key_press, cub);
 	mlx_hook(cub->mlx_win, 9, (1L<<21), focus_in, cub);
 	mlx_hook(cub->mlx_win, 10, (1L<<21), focus_out, cub);
