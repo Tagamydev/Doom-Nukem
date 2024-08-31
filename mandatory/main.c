@@ -1092,58 +1092,196 @@ int	intersection_check(t_line a, t_line b)
 	return (0);
 	*/
 
-int is_point_in_triangle(t_point pt, t_line *vertex)
+
+float	find_min_x_bbox(t_bbox_2d bbox)
 {
-	int	result;
-	int	num_vertex;
-	int	i;
-	t_point	vi;
-	t_point	vj;
+	float	min;
 
-	num_vertex = 3;
-	result = 0;
-	i = 0;
-	while (i < num_vertex)
+	min = bbox.a.a.px;
+	if (min < bbox.a.b.px)
+		min = bbox.a.b.px;
+	if (min < bbox.b.a.px)
+		min = bbox.b.a.px;
+	if (min < bbox.b.b.px)
+		min = bbox.b.b.px;
+	return (min);
+}
+
+float	find_min_y_bbox(t_bbox_2d bbox)
+{
+	float	min;
+
+	min = bbox.a.a.py;
+	if (min < bbox.a.b.py)
+		min = bbox.a.b.py;
+	if (min < bbox.b.a.py)
+		min = bbox.b.a.py;
+	if (min < bbox.b.b.py)
+		min = bbox.b.b.py;
+	return (min);
+}
+
+float	find_max_x_bbox(t_bbox_2d bbox)
+{
+	float	max;
+
+	max = bbox.a.a.px;
+	if (max > bbox.a.b.px)
+		max = bbox.a.b.px;
+	if (max > bbox.b.a.px)
+		max = bbox.b.a.px;
+	if (max > bbox.b.b.px)
+		max = bbox.b.b.px;
+	return (max);
+}
+
+float	find_max_y_bbox(t_bbox_2d bbox)
+{
+	float	max;
+
+	max = bbox.a.a.py;
+	if (max > bbox.a.b.py)
+		max = bbox.a.b.py;
+	if (max > bbox.b.a.py)
+		max = bbox.b.a.py;
+	if (max > bbox.b.b.py)
+		max = bbox.b.b.py;
+	return (max);
+}
+
+
+// a chunk of code for know if you are inside the bbox
+	/*
+	t_color	last;
+	t_point	player;
+	t_point	player_x;
+	t_line	test;
+	t_line	up;
+	t_line	down;
+	t_line	left;
+	t_line	right;
+
+	player = cub->player->camera->pos;
+	player_x = point(find_min_x(bbox), player.py);
+	test = line(player_x, player);
+
+	t_point	p1;
+	t_point	p2;
+	t_point	p3;
+	t_point	p4;
+
+	p1 = bbox.a.a;
+	p2 = bbox.a.b;
+	p3 = bbox.b.a;
+	p4 = bbox.b.b;
+
+	up = line(p1, p2);
+	down = line(p2, p4);
+	left = line(p3, p4);
+	right = line(p3, p1);
+
+	int number;
+
+	number = 0;
+
+	if (intersection_check(test, up))
+		number += 1;
+	if (intersection_check(test, down))
+		number += 1;
+	if (intersection_check(test, left))
+		number += 1;
+	if (intersection_check(test, right))
+		number += 1;
+	if (number % 2 != 0)
 	{
-		vi = vertex[i].a;
-		vj = vertex[i].b;
+		srand(bbox.a.a.px);
+		last = color_from_rgb(rand(), rand(), rand());
 
-		if ((vi.py > pt.py) != (vj.py > pt.py) && 
-            (pt.px < (vj.px - vi.px) * (pt.py - vi.py) / (vj.py - vi.py) + vi.px))
-			result != result;
-		i++;
+		draw_bbox(bbox, cub->map_editor, last, cub->tmp);
+		return (1);
 	}
+	return (0);
+	*/
+typedef struct s_bbox_sides
+{
+	t_point	a;
+	t_point	b;
+	t_point	c;
+	t_point	d;
+	int		size;
+}				t_bbox_sides;
+
+t_bbox_sides	bbox_sides(t_line a, t_line b, int size)
+{
+	t_bbox_sides	result;
+
+	result.a = a.a;
+	result.b = a.b;
+	result.c = b.a;
+	result.b = b.b;
+	result.size = size;
 	return (result);
 }
 
 int	this_bbox_intersect(t_cub *cub, t_bbox_2d bbox)
 {
-	t_line	v1;
-	t_line	v2;
-	t_line	v3;
-	t_line	vertex[3];
-	t_point	max_fov1;
-	t_point	max_fov2;
+	float	min_px;
+	float	min_py;
+	float	max_px;
+	float	max_py;
+	t_point	pos;
+	t_color	last;
+	t_bbox_sides	bs;
 
-	max_fov1.px = cub->player->camera->pos.px + (100.0 * cub->fov1_deltas.px);
-	max_fov1.py = cub->player->camera->pos.py + (100.0 * cub->fov1_deltas.py);
-	max_fov2.px = cub->player->camera->pos.px + (100.0 * cub->fov2_deltas.px);
-	max_fov2.py = cub->player->camera->pos.py + (100.0 * cub->fov2_deltas.py);
-	v1 = line(cub->player->camera->pos, max_fov1);
-	v2 = line(cub->player->camera->pos, max_fov2);
-	v3 = line(max_fov1, max_fov2);
-	vertex[0] = v1;
-	vertex[1] = v2;
-	vertex[2] = v3;
-	if (is_point_in_triangle(bbox.a.a, vertex))
-		return (1);
-	if (is_point_in_triangle(bbox.a.b, vertex))
-		return (1);
-	if (is_point_in_triangle(bbox.b.a, vertex))
-		return (1);
-	if (is_point_in_triangle(bbox.b.b, vertex))
-		return (1);
-	return (0);
+
+	pos = cub->player->camera->pos;
+	min_px = find_min_x_bbox(bbox);
+	min_py = find_min_y_bbox(bbox);
+	max_px = find_max_x_bbox(bbox);
+	max_py = find_max_y_bbox(bbox);
+	t_point	a;
+	t_point b;
+	t_point c;
+	t_point d;
+
+	a = point(min_px, min_py);
+	b = point(min_px, max_py);
+	c = point(max_px, max_py);
+	d = point(max_px, min_py);
+	if (pos.px < min_px)
+	{
+		if (pos.py > max_py)
+			bs = bbox_sides(line(b, a), line(c, b), 2);
+		else if (pos.py < min_py)
+			bs = bbox_sides(line(b, a), line(a, d), 2);
+		else
+			bs = bbox_sides(line(b, a), line(c, b), 1);
+	}
+	if (pos.px > max_px)
+	{
+		if (pos.py > max_py)
+			bs = bbox_sides(line(c, b), line(d, c), 2);
+		else if (pos.py < min_py)
+			bs = bbox_sides(line(b, a), line(d, c), 2);
+		else
+			bs = bbox_sides(line(b, a), line(c, b), 1);
+	}
+	else
+	{
+		if (pos.py > max_py)
+			bs = bbox_sides(line(c, b), line(d, c), 1);
+		else if (pos.py < min_py)
+			bs = bbox_sides(line(a, d), line(d, c), 1);
+		else
+			return (1);
+	}
+
+	/*
+	srand(bbox.a.a.px);
+	last = color_from_rgb(rand(), rand(), rand());
+	draw_bbox(bbox, cub->map_editor, last, cub->tmp);
+	*/
+	return (1);
 }
 
 int	is_player_in_front(t_point pt, t_bsp *node)
@@ -1177,7 +1315,6 @@ int	is_player_in_front(t_point pt, t_bsp *node)
 	else if (numerator > 0 || (numerator_is_zero && denominator < 0))
 		return (0);
 	return (0);
-
 }
 
 int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col)
@@ -1215,7 +1352,7 @@ int editor_mode(t_cub *cub)
 	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(50, 50, 50));
 
 	draw_bsp(cub, last, color(BLACK), 0);
-	draw_bsp(cub, cub->map_editor, color(WHITE), 0);
+	//draw_bsp(cub, cub->map_editor, color(WHITE), 0);
 
 	draw_fov_intersection(cub, last, color(BLACK));
 	draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255));
@@ -1270,7 +1407,7 @@ int	frame(void *p_cub)
 
 int	mouse_press(int key, int x, int y, void *param)
 {
-	printf("key:%d, intx;%d, inty:%d\n", key, x, y);
+//	printf("key:%d, intx;%d, inty:%d\n", key, x, y);
 	t_cub		*cub;
 
 	cub = (t_cub *)param;
@@ -1357,7 +1494,7 @@ int	key_press(int key, void *param)
 	t_cub		*cub;
 
 	cub = (t_cub *)param;
-	printf("key:%d\n", key);
+	//printf("key:%d\n", key);
 	if (key == 109)
 	{
 		if (cub->game_mode == GAME)
