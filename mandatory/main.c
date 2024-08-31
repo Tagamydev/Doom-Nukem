@@ -600,17 +600,75 @@ t_bbox_2d	easy_bbox_2d(t_segment *split, t_list *segments)
 	return (result);
 }
 
+float	fix_angle(float angle)
+{
+	if (angle < 0)
+		angle += 360.0;
+	if (angle > 359.0)
+		angle -= 360.0;
+	return (angle);
+}
+
+float	deg2_rad(float angle)
+{
+	return (fix_angle(angle) * PI / 180.0);
+}
+
+t_point	rotate_point(t_point pt, float angle)
+{
+	float	x;
+	float	y;
+
+	x = pt.px;
+	y = pt.py;
+	pt.px = x * cos(deg2_rad(angle)) - y * sin(deg2_rad(angle));
+	pt.py = x * sin(deg2_rad(angle)) + y * cos(deg2_rad(angle));
+	return (pt);
+}
+
+t_line	rotate_line(t_line line, float angle)
+{
+	line.a = rotate_point(line.a, angle);
+	line.b = rotate_point(line.b, angle);
+	return (line);
+}
+
 t_bbox_2d	hard_bbox_2d(t_segment *split, t_list *segments)
 {
-	double	angle;
+	double		angle;
+	double		angle2;
+	t_node		*tmp;
+	t_segment	*seg_tmp;
 
 	angle = (atan2(split->segment.b.py - split->segment.a.py, 
 	split->segment.b.px - split->segment.a.px));
 	angle = angle * (180.0 / PI);
 	if (angle < 0)
 		angle += 360.0;
-	printf("angle:%f\n", angle);
-	return (bbox_2d());
+	if (angle > 359.0)
+		angle -= 360.0;
+	angle2 = 360.0 - angle;
+	tmp = segments->head;
+	while (tmp)
+	{
+		seg_tmp = tmp->content;
+		seg_tmp->segment = rotate_line(seg_tmp->segment, angle);
+		tmp = tmp->next;
+	}
+	split->segment = rotate_line(split->segment, angle);
+	split->segment = rotate_line(split->segment, -angle);
+	//split->segment = rotate_line(split->segment, angle);
+
+	t_bbox_2d	result;
+	t_line		bound;
+
+	bound = get_bounds(segments);
+	result.a = line(point(bound.a.px, bound.a.py), point(bound.a.px, bound.b.py));
+	result.a = rotate_line(result.a, -angle);
+	result.b = line(point(bound.b.px, bound.a.py), point(bound.b.px, bound.b.py));
+	result.b = rotate_line(result.b, -angle);
+
+	return (result);
 }
 
 t_bbox_2d	get_bbox_2d(t_segment *split, t_list *segments)
@@ -1031,13 +1089,13 @@ int	main(int argc, char **argv)
 	t_list	segments;
 
 	segments = list(NULL);
-	list_push_b(&segments, node(segment(line(point(3, 6), point(5, 6))), &default_node_free));//easy
+	list_push_b(&segments, node(segment(line(point(5, 6), point(2, 3))), &default_node_free));//hard
 	list_push_b(&segments, node(segment(line(point(0, 0), point(7, 1))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(7, 1), point(7, 8))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(7, 8), point(1, 8))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(1, 8), point(0, 0))), &default_node_free));
 
-	list_push_b(&segments, node(segment(line(point(5, 6), point(2, 3))), &default_node_free));//hard
+	list_push_b(&segments, node(segment(line(point(3, 6), point(5, 6))), &default_node_free));//easy
 	list_push_b(&segments, node(segment(line(point(2, 4), point(3, 6))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(2, 3), point(2, 4))), &default_node_free));
 
