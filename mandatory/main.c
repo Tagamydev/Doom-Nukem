@@ -683,6 +683,7 @@ t_bbox_2d	get_bbox_2d(t_segment *split, t_list *segments)
 		return (easy_bbox_2d(split, segments));
 	else
 		return (hard_bbox_2d(split, segments));
+		//return (easy_bbox_2d(split, segments));
 }
 
 t_bsp	*build_bsp(t_list segments, t_list *new_segments);
@@ -1090,83 +1091,83 @@ int	intersection_check(t_line a, t_line b)
 		return (1);
 	return (0);
 	*/
-int	this_bbox_intersect(t_cub *cub, t_bbox_2d bbox)
+int sat_bbox_2d(t_bbox_2d a, t_bbox_2d b)
 {
-	t_player	*player;
-	t_line		fov_1;
-	t_line		fov_2;
-	t_line		up;
-	t_line		down;
-	t_line		left;
-	t_line		right;
 
-	player = cub->player;
-	fov_1 = bbox_intersect_make_fov(cub->fov1_deltas, player->camera->pos);
-	fov_2 = bbox_intersect_make_fov(cub->fov2_deltas, player->camera->pos);
+}
 
-	t_point	p1;
-	t_point	p2;
-	t_point	p3;
-	t_point	p4;
+float	get_angle_two_points(t_point pt1, t_point pt2)
+{
+	float	angle;
 
-	p1 = bbox.a.a;
-	p2 = bbox.a.b;
-	p3 = bbox.b.a;
-	p4 = bbox.b.b;
+	angle = (atan2(pt2.py - pt1.py, 
+	pt2.px - pt1.px));
+	angle = angle * (180.0 / PI);
+	/*
+	if (angle < 0)
+		angle += 360.0;
+	if (angle > 359.0)
+		angle -= 360.0;
+		*/
+	return (angle);
+}
 
-	up = line(p1, p2);
-	down = line(p2, p4);
-	left = line(p3, p4);
-	right = line(p3, p1);
-
-	if (intersection_check(fov_1, up) || intersection_check(fov_2, up))
-		return (1);
-	if (intersection_check(fov_1, down) || intersection_check(fov_2, down))
-		return (1);
-	if (intersection_check(fov_1, left) || intersection_check(fov_2, left))
-		return (1);
-	if (intersection_check(fov_1, right) || intersection_check(fov_2, right))
+int	is_in_range(float min, float max, float value)
+{
+	if (value > min && value < max)
 		return (1);
 	return (0);
+}
+
+int	this_bbox_intersect(t_cub *cub, t_bbox_2d bbox)
+{
+}
+
+int	is_player_in_front(t_point pt, t_bsp *node)
+{
+	t_point	player;
+
+	player = pt;
+	t_segment	*splitter_seg;
+	float		numerator;
+	float		denominator;
+	int			denominator_is_zero;
+	int			numerator_is_zero;
+	float		intersection;
+	t_point		intersection_pt;
+
+	splitter_seg = node->splitter;
+	numerator = cross_2d(
+	point(
+	player.px - splitter_seg->segment.a.px, 
+	player.py - splitter_seg->segment.a.py
+	), splitter_seg->vector);
+	denominator = cross_2d(splitter_seg->vector, player);
+
+	denominator_is_zero = ft_abs(denominator) < EPS;
+	numerator_is_zero = ft_abs(numerator) < EPS;
+
+	if (denominator_is_zero && numerator_is_zero)
+		return (1);
+	if (numerator < 0 || (numerator_is_zero && denominator > 0))
+		return (1);
+	else if (numerator > 0 || (numerator_is_zero && denominator < 0))
+		return (0);
+	return (0);
+
 }
 
 int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col)
 {
 	if (node)
 	{
-		if (this_bbox_intersect(cub, node->front_bbox))
-		{
+		if (is_player_in_front(cub->player->camera->pos, node))
 			draw_segment(node->splitter, map_editor, cub->tmp, col);
-			/*
-			if (col.hex != color(BLACK).hex)
-				draw_bbox(node->front_bbox, map_editor, color(GREEN), cub->tmp);
-			else
-				draw_bbox(node->front_bbox, map_editor, color(BLACK), cub->tmp);
-				*/
-		}
-		else if (this_bbox_intersect(cub, node->back_bbox))
-		{
-			draw_segment(node->splitter, map_editor, cub->tmp, col);
-			/*
-			if (col.hex != color(BLACK).hex)
-				draw_bbox(node->front_bbox, map_editor, color(GREEN), cub->tmp);
-			else
-				draw_bbox(node->front_bbox, map_editor, color(BLACK), cub->tmp);
-				*/
-		}
-		else
-		{
-			if (col.hex != color(BLACK).hex)
-				draw_bbox(node->front_bbox, map_editor, color(GREEN), cub->tmp);
-			else
-				draw_bbox(node->front_bbox, map_editor, color(BLACK), cub->tmp);
-		}
-		if (node->front)
+		if (node->front && this_bbox_intersect(cub, node->front_bbox))
 			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col);
-		if (node->back)
+		if (node->back && this_bbox_intersect(cub, node->back_bbox))
 			draw_bsp_segment_by_bbox(cub, node->back, map_editor, col);
 	}
-
 }
 
 int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
@@ -1190,8 +1191,8 @@ int editor_mode(t_cub *cub)
 	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(0, 0, 0));
 	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(50, 50, 50));
 
-	//draw_bsp(cub, last, color(BLACK), 0);
-	//draw_bsp(cub, cub->map_editor, color(WHITE), 0);
+	draw_bsp(cub, last, color(BLACK), 0);
+	draw_bsp(cub, cub->map_editor, color(WHITE), 0);
 
 	draw_fov_intersection(cub, last, color(BLACK));
 	draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255));
