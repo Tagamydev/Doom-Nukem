@@ -1820,6 +1820,7 @@ typedef	struct s_render_vertex
 {
 	t_line	vertex;
 	float	min_dist;
+	t_color	color;
 }				t_render_vertex;
 
 /*
@@ -1996,8 +1997,11 @@ int	get_render_vertex_from_bsp(t_cub *cub, t_bsp *node, t_fov *fov, int *lock, f
 							return (0);
 						}
 						tmp2->min_dist = min_dist;
+						srand(node->id);
+						tmp2->color = color_from_rgb(rand() % 255, rand() % 255, rand() % 255);
+
 						insert_vertex_to_render(tmp2, render_list);
-						draw_line_remap(tmp->segment, cub->map_editor, cub->tmp, color(GREEN));
+						//draw_segment(tmp, cub->map_editor, cub->tmp, color(GREEN));
 					}
 				}
 			}
@@ -2032,7 +2036,10 @@ int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
 	while (tmp)
 	{
 		tmp1 = tmp->content;
-		draw_line_remap(tmp1->vertex, map_editor, cub->tmp, color(RED));
+		if (col.hex != color(BLACK).hex)
+			draw_line_remap(tmp1->vertex, map_editor, cub->tmp, tmp1->color);
+		else
+			draw_line_remap(tmp1->vertex, map_editor, cub->tmp, col);
 		tmp = tmp->next;
 	}
 }
