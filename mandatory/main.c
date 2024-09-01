@@ -1358,12 +1358,14 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node)
 {
 	t_point		tmp;
 	t_point		pos;
-	t_point		screen_min;
-	t_point		screen_max;
+	t_point		fov1;
+	t_point		fov2;
 	t_segment	*tmp2;
-	int			result;
+	t_segment	*tmp3;
 	int			result1;
 	int			result2;
+	int			result3;
+	int			result4;
 
 	if (!node)
 		return (0);
@@ -1372,20 +1374,30 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node)
 	tmp.py = node->splitter->segment.a.py + node->splitter->segment.b.py;
 	tmp.py = tmp.py / 2.0;
 	pos = cub->player->camera->pos;
-	screen_min = cub->player->camera->pos;
-	screen_max = cub->player->camera->pos;
-	screen_min.px -= cub->p_deltas.py * (cub->player->camera->fov / 2.0);
-	screen_min.py += cub->p_deltas.px * (cub->player->camera->fov / 2.0);
-	screen_max.px += cub->p_deltas.py * (cub->player->camera->fov / 2.0);
-	screen_max.py -= cub->p_deltas.px * (cub->player->camera->fov / 2.0);
-	tmp2 = segment(line(screen_min, screen_max));
+	fov1 = cub->player->camera->pos;
+	fov2 = cub->player->camera->pos;
+	fov1.px += cub->fov1_deltas.px;
+	fov1.py += cub->fov1_deltas.py;
+	fov2.px += cub->fov2_deltas.px;
+	fov2.py += cub->fov2_deltas.py;
+	tmp2 = segment(line(pos, fov1));
 	if (!tmp2)
 		return (0);
-	result = check_point_in_front_of_segment(tmp, *tmp2);
+	tmp3 = segment(line(fov2, pos));
+	if (!tmp3)
+	{
+		free(tmp2);
+		return (0);
+	}
+	draw_segment(tmp2, cub->map_editor, cub->tmp, color(BLUE));
+	draw_segment(tmp3, cub->map_editor, cub->tmp, color(BLUE));
 	result1 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp2);
 	result2 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp2);
+	result3 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp3);
+	result4 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp3);
 	free(tmp2);
-	if (result || result1 || result2)
+	free(tmp3);
+	if ((result1 || result2) && (result3 || result4))
 		return (1);
 	return (0);
 }
@@ -1402,7 +1414,9 @@ int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t
 		if (is_player_in_front(cub->player->camera->pos, node))
 		{
 			if (is_in_front_of_player(cub, node))
+			{
 				draw_segment(node->splitter, map_editor, cub->tmp, col);
+			}
 		}
 		if (node->front)
 			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col);
