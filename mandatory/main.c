@@ -1389,8 +1389,6 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node)
 		free(tmp2);
 		return (0);
 	}
-	draw_segment(tmp2, cub->map_editor, cub->tmp, color(BLUE));
-	draw_segment(tmp3, cub->map_editor, cub->tmp, color(BLUE));
 	result1 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp2);
 	result2 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp2);
 	result3 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp3);
