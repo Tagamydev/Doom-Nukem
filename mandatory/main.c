@@ -1443,6 +1443,8 @@ t_point	get_intersection_between_lines(t_line line1, t_line line2, int *error)
 	return (point(x, y));
 }
 
+//old cut_segment
+/*
 void	cut_segment(t_cub *cub, int *cut, t_segment *seg, t_fov *fov, t_point fov1, t_point fov2, t_point pos, 
 int is_in_front, 
 int if_segment_a_is_in_front_of_fov1, 
@@ -1482,6 +1484,9 @@ int intersect_fov2)
 	}
 	else if (if_segment_b_is_in_front_of_fov1 && if_segment_b_is_in_front_of_fov2)
 	{
+		printf("\n\nb before:final_segment:p1(%f, %f),p2(%f, %f)\n", seg->segment.a.px, seg->segment.a.py,
+		seg->segment.b.px, seg->segment.b.py);
+		//draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(GREEN));
 		if (intersect_fov1)
 		{
 			error = 0;
@@ -1492,14 +1497,17 @@ int intersect_fov2)
 		}
 		if (intersect_fov2)
 		{
+			//printf("yeahh\n");
 			error = 0;
 			cross = get_intersection_between_lines(fov2_l, seg->segment, &error);
 			if (error)
 				return ;
 			seg->segment.a = cross;
 		}
+		printf("b:final_segment:p1(%f, %f),p2(%f, %f)\n", seg->segment.a.px, seg->segment.a.py,
+		seg->segment.b.px, seg->segment.b.py);
 	}
-	else if (is_in_front)
+	else //if (is_in_front)
 	{
 		error = 0;
 		x = get_intersection_between_lines(fov1_l, seg->segment, &error);
@@ -1521,9 +1529,75 @@ int intersect_fov2)
 		}
 	}
 }
+*/
 
+//==================================================================
+
+void	cut_segment(t_cub *cub, t_segment *seg, t_point fov1, t_point fov2, int case_num) 
+{
+	t_point	cross;
+	t_line	tmp;
+	int		error;
+
+	if (!segment || !case_num)
+		return ;
+	if (case_num == 1)
+	{
+		printf("case1\n");
+		tmp = line(cub->player->camera->pos, fov1);
+		error = 0;
+		cross = get_intersection_between_lines(tmp, seg->segment, &error);
+		if (error)
+			return ;
+		seg->segment.a = cross;
+	}
+	else if (case_num == 2)
+	{
+		tmp = line(cub->player->camera->pos, fov2);
+		error = 0;
+		cross = get_intersection_between_lines(tmp, seg->segment, &error);
+		if (error)
+			return ;
+		seg->segment.b = cross;
+
+		printf("case2\n");
+	}
+	else if (case_num == 3)
+	{
+		tmp = line(cub->player->camera->pos, fov1);
+		error = 0;
+		cross = get_intersection_between_lines(tmp, seg->segment, &error);
+		if (error)
+			return ;
+		seg->segment.a = cross;
+
+		printf("case3\n");
+	}
+	else if (case_num == 4)
+	{
+		printf("case4\n");
+
+		tmp = line(cub->player->camera->pos, fov2);
+		error = 0;
+		cross = get_intersection_between_lines(tmp, seg->segment, &error);
+		if (error)
+			return ;
+		seg->segment.b = cross;
+	}
+	else if (case_num == 5)
+	{
+
+		printf("case5\n");
+	}
+}
+/*
+*/
+
+int	update_player_angle_from_angle(t_cub *cub, float angle);
 int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 {
+	cub->player->camera->pos = point(1.569673, 7.532527);
+	update_player_angle_from_angle(cub, 276.348846);
 	t_point		tmp;
 	t_point		pos;
 	t_point		screen_min;
@@ -1533,12 +1607,12 @@ int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 	t_segment	*tmp1;
 	t_segment	*tmp2;
 	t_segment	*tmp3;
-	int			result1;
-	int			result2;
-	int			result3;
-	int			result4;
-	int			result5;
-	int			result6;
+	int			is_a_in_front_of_fov1;
+	int			is_b_in_front_of_fov1;
+	int			is_a_in_front_of_fov2;
+	int			is_b_in_front_of_fov2;
+	int			is_a_in_front_of_the_player;
+	int			is_b_in_front_of_the_player;
 
 	if (!seg)
 		return (0);
@@ -1579,53 +1653,163 @@ int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 		free(tmp2);
 		return (0);
 	}
-	result1 = check_point_in_front_of_segment(seg->segment.a, *tmp2);
-	result2 = check_point_in_front_of_segment(seg->segment.b, *tmp2);
-	result3 = check_point_in_front_of_segment(seg->segment.a, *tmp3);
-	result4 = check_point_in_front_of_segment(seg->segment.b, *tmp3);
+	is_a_in_front_of_fov1 = check_point_in_front_of_segment(seg->segment.a, *tmp2);
+	is_b_in_front_of_fov1 = check_point_in_front_of_segment(seg->segment.b, *tmp2);
+	is_a_in_front_of_fov2 = check_point_in_front_of_segment(seg->segment.a, *tmp3);
+	is_b_in_front_of_fov2 = check_point_in_front_of_segment(seg->segment.b, *tmp3);
 
-	result5 = check_point_in_front_of_segment(seg->segment.a, *tmp1);
-	result6 = check_point_in_front_of_segment(seg->segment.b, *tmp1);
+	is_a_in_front_of_the_player = check_point_in_front_of_segment(seg->segment.a, *tmp1);
+	is_b_in_front_of_the_player = check_point_in_front_of_segment(seg->segment.b, *tmp1);
 
-	int result7;
-	int	result8;
+	int segment_intersect_with_fov1;
+	int	segment_intersect_with_fov2;
 
 
 	free(tmp1);
 	free(tmp2);
 	free(tmp3);
 
-	if ((result1 || result2) && (result3 || result4))
+	/*
+	if ((is_a_in_front_of_fov1 || is_b_in_front_of_fov1) && 
+	(is_a_in_front_of_fov2 || is_b_in_front_of_fov2))
 	{
-		result7 = intersection_check(seg->segment, line(pos, fov1));
-		result8 = intersection_check(seg->segment, line(pos, fov2));
-		/*
-		if (result7 || result8)
-			cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (result5 && result6), result1, result2, result3, result4, result7, result8);
-			*/
-		if ((result5 && result6))
+		segment_intersect_with_fov1 = intersection_check(seg->segment, line(pos, fov1));
+		segment_intersect_with_fov2 = intersection_check(seg->segment, line(pos, fov2));
+		if (segment_intersect_with_fov1 || segment_intersect_with_fov2)
+			cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
+		if ((is_a_in_front_of_the_player && is_b_in_front_of_the_player))
 		{
-			*cut = (result7 * 1) + (result8 * 2);
+			*cut = (segment_intersect_with_fov1 * 1) + (segment_intersect_with_fov2 * 2);
 			return (1);
 		}
 		else
 		{
-			if (result7 || result8)
+			if (segment_intersect_with_fov1 || segment_intersect_with_fov2)
 			{
-				if ((result5 && result6))
-					*cut = (result7 * 1) + (result8 * 2);
+				if ((is_a_in_front_of_the_player && is_b_in_front_of_the_player))
+					*cut = (segment_intersect_with_fov1 * 1) + (segment_intersect_with_fov2 * 2);
 				return (1);
 			}
 			return (0);
 		}
 	}
+	*/
+	int	a_is_inside_fov;
+	int	b_is_inside_fov;
+	int	is_in_front_of_the_player;
+	int	fov_cut_all_the_segment;
+
+	a_is_inside_fov = (is_a_in_front_of_fov1 && is_a_in_front_of_fov2);
+	b_is_inside_fov = (is_b_in_front_of_fov1 && is_b_in_front_of_fov2);
+	is_in_front_of_the_player = (is_a_in_front_of_the_player && is_b_in_front_of_the_player);
+
+	// this means the segments is inside without cutting anything
+	if (a_is_inside_fov && b_is_inside_fov)
+		return (1);
+	else
+	{
+		segment_intersect_with_fov1 = intersection_check(seg->segment, line(pos, fov1));
+		segment_intersect_with_fov2 = intersection_check(seg->segment, line(pos, fov2));
+
+		if (!(a_is_inside_fov || b_is_inside_fov) 
+		&& !(segment_intersect_with_fov1 && segment_intersect_with_fov2))
+			return (0);
+			//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
+		if (is_a_in_front_of_the_player && a_is_inside_fov && !b_is_inside_fov)
+		{
+			//i need to find b
+			if (segment_intersect_with_fov1)
+			{
+				printf("case1 \n");
+				draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
+				cut_segment(cub, seg, fov1, fov2, 1);
+				//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
+			}
+			if (segment_intersect_with_fov2)
+			{
+				draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
+				printf("case2 \n");
+				cut_segment(cub, seg, fov1, fov2, 2);
+				//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
+			}
+			return (1);
+		}
+		if (is_b_in_front_of_the_player && b_is_inside_fov && !a_is_inside_fov)
+		{
+			//i need to find a
+			if (segment_intersect_with_fov1)
+			{
+				draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
+				printf("case3 \n");
+				cut_segment(cub, seg, fov1, fov2, 3);
+				//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
+			}
+			if (segment_intersect_with_fov2)
+			{
+				draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
+				printf("case4 \n");
+				cut_segment(cub, seg, fov1, fov2, 4);
+				//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
+			}
+			return (1);
+		}
+		if (is_in_front_of_the_player)
+		{
+			draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
+			printf("case5 \n");
+			//i need to find a and b
+			cut_segment(cub, seg, fov1, fov2, 5);
+			//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
+			return (1);
+		}
+		if (segment_intersect_with_fov1 && segment_intersect_with_fov2)
+		{
+			if (is_b_in_front_of_fov2)
+				return (0);
+			if (is_a_in_front_of_the_player && is_a_in_front_of_fov1)
+				return (0);
+			cut_segment(cub, seg, fov1, fov2, 5);
+			return (1);
+		}
+		return (0);
+	}
+	// old cut segment function
+	//		cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
 
 	/*
-	if ((result1 && result3 && result5) || (result2 && result4 && result6))
+	if ((is_a_in_front_of_fov1 && is_a_in_front_of_fov2 && is_a_in_front_of_the_player) || (is_b_in_front_of_fov1 && is_b_in_front_of_fov2 && is_b_in_front_of_the_player))
 		return (1);
 		*/
 	return (0);
 }
+		/*
+		draw_line_remap(line(screen_max, screen_min), cub->map_editor, cub->tmp, color(GREEN));
+		fov_cut_all_the_segment = (segment_intersect_with_fov1 
+		&& segment_intersect_with_fov2);
+
+		if (a_is_inside_fov && !b_is_inside_fov)
+		{
+			//this means the b_edge is begin cut
+			return (1);
+
+		}
+		else if (!a_is_inside_fov && b_is_inside_fov)
+		{
+			//this means the a_edge is begin cut
+			return (1);
+
+		}
+		else
+		{
+			//extreme case
+			if (fov_cut_all_the_segment && is_in_front_of_player)
+			{
+				return (1);
+
+			}
+		}
+		return (0);
+		*/
 
 int	is_player_in_front(t_point pt, t_bsp *node)
 {
@@ -1839,7 +2023,7 @@ int	get_render_vertex_from_bsp(t_cub *cub, t_bsp *node, t_fov *fov, int *lock, f
 				}
 			}
 			free(tmp);
-			draw_line_remap(node->splitter->segment, cub->map_editor, cub->tmp, color(BLUE));
+			//draw_line_remap(node->splitter->segment, cub->map_editor, cub->tmp, color(BLUE));
 		}
 		if (node->front)
 			get_render_vertex_from_bsp(cub, node->front, fov, lock, max_dist, render_list);
@@ -1920,6 +2104,8 @@ int	frame(void *p_cub)
 	if ((int)now > last)
 	{
 		printf("fps:%d\n", cub->frame);
+		printf("player pos:%f,%f, angle:%f\n", 
+		cub->player->camera->pos.px, cub->player->camera->pos.py, cub->player->camera->angle);
 		printf("last:%f\n", now);
 		cub->frame = 0;
 		last = now;
@@ -2016,6 +2202,22 @@ int	calculate_deltas(t_player *player, t_point *deltas, t_point *fov1, t_point *
 		fov2->px = cos(deg2_rad(angle + fov));
 		fov2->py = sin(deg2_rad(angle + fov));
 	}
+}
+
+int	update_player_angle_from_angle(t_cub *cub, float angle)
+{
+	float fov;
+
+		cub->player->camera->angle = angle;
+		fov = cub->player->camera->fov;
+		fov = fov / 2.0f;
+		cub->p_deltas.px = cos(deg2_rad(angle));
+		cub->p_deltas.py = sin(deg2_rad(angle));
+		cub->fov1_deltas.px = cos(deg2_rad(angle - fov));
+		cub->fov1_deltas.py = sin(deg2_rad(angle - fov));
+		cub->fov2_deltas.px = cos(deg2_rad(angle + fov));
+		cub->fov2_deltas.py = sin(deg2_rad(angle + fov));
+
 }
 
 int	update_player_angle(t_player *player, t_point *deltas, t_point *fov1, t_point *fov2, float angle)
