@@ -1740,6 +1740,11 @@ int	main(int argc, char **argv)
 	list_push_b(&segments, node(segment(line(point(7, 8), point(1, 8))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(1, 8), point(0, 0))), &default_node_free));
 
+	list_push_b(&segments, node(segment(line(point(-10, -10), point(17, 1))), &default_node_free));
+	list_push_b(&segments, node(segment(line(point(17, 1), point(17, 18))), &default_node_free));
+	list_push_b(&segments, node(segment(line(point(17, 18), point(1, 18))), &default_node_free));
+	list_push_b(&segments, node(segment(line(point(1, 18), point(-10, -10))), &default_node_free));
+
 	list_push_b(&segments, node(segment(line(point(3, 6), point(5, 6))), &default_node_free));//easy
 	list_push_b(&segments, node(segment(line(point(2, 4), point(3, 6))), &default_node_free));
 	list_push_b(&segments, node(segment(line(point(2, 3), point(2, 4))), &default_node_free));
