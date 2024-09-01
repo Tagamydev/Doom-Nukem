@@ -1366,7 +1366,56 @@ int	free_is_in_front_of_player(void **a, void **b, void **c)
 	*c = NULL;
 }
 
-int	is_in_front_of_player(t_cub *cub, t_bsp *node, int *cut)
+typedef struct s_fov
+{
+	float	fov;
+	float	h_fov;
+	float	angle;
+	float	fov1_angle;
+	float	fov2_angle;
+	t_point	fov1_delta;
+	t_point	fov2_delta;
+}				t_fov;
+
+t_fov	make_fov_with_angles(float fov, float angle, float angle_fov1, float angle_fov2)
+{
+	t_fov	result;
+
+	result.fov = fov;
+	result.h_fov = fov / 2.0;
+	result.angle = angle;
+	if (angle_fov1 > angle)
+		result.fov1_angle = angle;
+	else
+		result.fov1_angle = angle_fov1;
+	if (angle_fov2 < angle)
+		result.fov2_angle = angle;
+	else
+		result.fov2_angle = angle_fov2;
+	result.fov1_delta.px = cos(deg2_rad(result.fov1_angle));
+	result.fov1_delta.py = sin(deg2_rad(result.fov1_angle));
+	result.fov2_delta.px = cos(deg2_rad(result.fov2_angle));
+	result.fov2_delta.py = sin(deg2_rad(result.fov2_angle));
+	return (result);
+}
+
+t_fov	make_fov(float fov, float angle)
+{
+	t_fov	result;
+
+	result.fov = fov;
+	result.h_fov = fov / 2.0;
+	result.angle = angle;
+	result.fov1_angle = angle - result.h_fov;
+	result.fov2_angle = angle + result.h_fov;
+	result.fov1_delta.px = cos(deg2_rad(result.fov1_angle));
+	result.fov1_delta.py = sin(deg2_rad(result.fov1_angle));
+	result.fov2_delta.px = cos(deg2_rad(result.fov2_angle));
+	result.fov2_delta.py = sin(deg2_rad(result.fov2_angle));
+	return (result);
+}
+
+int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 {
 	t_point		tmp;
 	t_point		pos;
@@ -1384,11 +1433,11 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node, int *cut)
 	int			result5;
 	int			result6;
 
-	if (!node)
+	if (!seg)
 		return (0);
-	tmp.px = node->splitter->segment.a.px + node->splitter->segment.b.px;
+	tmp.px = seg->segment.a.px + seg->segment.b.px;
 	tmp.px = tmp.px / 2.0;
-	tmp.py = node->splitter->segment.a.py + node->splitter->segment.b.py;
+	tmp.py = seg->segment.a.py + seg->segment.b.py;
 	tmp.py = tmp.py / 2.0;
 	pos = cub->player->camera->pos;
 
@@ -1402,10 +1451,10 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node, int *cut)
 
 	fov1 = cub->player->camera->pos;
 	fov2 = cub->player->camera->pos;
-	fov1.px += cub->fov1_deltas.px * 100.0f;
-	fov1.py += cub->fov1_deltas.py * 100.0f;
-	fov2.px += cub->fov2_deltas.px * 100.0f;
-	fov2.py += cub->fov2_deltas.py * 100.0f;
+	fov1.px += fov->fov1_delta.px * 100.0f;
+	fov1.py += fov->fov1_delta.py * 100.0f;
+	fov2.px += fov->fov2_delta.px * 100.0f;
+	fov2.py += fov->fov2_delta.py * 100.0f;
 
 	tmp1 = segment(line(screen_min, screen_max));
 	if (!tmp1)
@@ -1423,13 +1472,13 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node, int *cut)
 		free(tmp2);
 		return (0);
 	}
-	result1 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp2);
-	result2 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp2);
-	result3 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp3);
-	result4 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp3);
+	result1 = check_point_in_front_of_segment(seg->segment.a, *tmp2);
+	result2 = check_point_in_front_of_segment(seg->segment.b, *tmp2);
+	result3 = check_point_in_front_of_segment(seg->segment.a, *tmp3);
+	result4 = check_point_in_front_of_segment(seg->segment.b, *tmp3);
 
-	result5 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp1);
-	result6 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp1);
+	result5 = check_point_in_front_of_segment(seg->segment.a, *tmp1);
+	result6 = check_point_in_front_of_segment(seg->segment.b, *tmp1);
 
 	int result7;
 	int	result8;
@@ -1441,11 +1490,12 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node, int *cut)
 
 	if ((result1 || result2) && (result3 || result4))
 	{
-		result7 = intersection_check(node->splitter->segment, line(pos, fov1));
-		result8 = intersection_check(node->splitter->segment, line(pos, fov2));
+		result7 = intersection_check(seg->segment, line(pos, fov1));
+		result8 = intersection_check(seg->segment, line(pos, fov2));
 		if ((result5 && result6))
 		{
 			*cut = (result7 * 1) + (result8 * 2);
+				
 			return (1);
 		}
 		else
@@ -1471,32 +1521,40 @@ int	is_player_in_front(t_point pt, t_bsp *node)
 	return (check_point_in_front_of_segment(pt, *(node->splitter)));
 }
 
-int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col)
+int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col, t_fov *fov)
 {
-	int	cut;
+	int			cut;
+	t_segment	*tmp;
 
+	tmp = NULL;
 	if (node)
 	{
 		if (is_player_in_front(cub->player->camera->pos, node))
 		{
 			cut = 0;
-			if (is_in_front_of_player(cub, node, &cut))
+			if (node->splitter)
+				tmp = segment(node->splitter->segment);
+			if (is_in_front_of_player(cub, tmp, &cut, fov))
 			{
 				printf("cut:%d\n",cut);
 				draw_segment(node->splitter, map_editor, cub->tmp, col);
 			}
+			free(tmp);
 		}
 		if (node->front)
-			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col);
+			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col, fov);
 		if (node->back)
-			draw_bsp_segment_by_bbox(cub, node->back, map_editor, col);
+			draw_bsp_segment_by_bbox(cub, node->back, map_editor, col, fov);
 	}
 }
 
 int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
 {
+	t_fov	fov;
+
+	fov = make_fov(cub->player->camera->fov, cub->player->camera->angle);
 	if (cub->root_node)
-		draw_bsp_segment_by_bbox(cub, cub->root_node, map_editor, col);
+		draw_bsp_segment_by_bbox(cub, cub->root_node, map_editor, col, &fov);
 }
 
 int editor_mode(t_cub *cub)
