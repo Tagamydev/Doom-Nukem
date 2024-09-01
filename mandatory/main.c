@@ -1415,6 +1415,12 @@ t_fov	make_fov(float fov, float angle)
 	return (result);
 }
 
+void	cut_segment(int *cut, t_segment *seg)
+{
+	;
+
+}
+
 int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 {
 	t_point		tmp;
@@ -1495,14 +1501,20 @@ int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 		if ((result5 && result6))
 		{
 			*cut = (result7 * 1) + (result8 * 2);
-				
+			if (*cut)
+				cut_segment(cut, seg);
 			return (1);
 		}
 		else
 		{
 			if (result7 || result8)
 			{
-				*cut = (result7 * 1) + (result8 * 2);
+				if ((result5 && result6))
+				{
+					*cut = (result7 * 1) + (result8 * 2);
+					if (*cut)
+						cut_segment(cut, seg);
+				}
 				return (1);
 			}
 			return (0);
@@ -1521,40 +1533,79 @@ int	is_player_in_front(t_point pt, t_bsp *node)
 	return (check_point_in_front_of_segment(pt, *(node->splitter)));
 }
 
-int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col, t_fov *fov)
+float	distance_between_points(t_point a, t_point b)
+{
+	float	result;
+
+	result = sqrt(((b.px - a.px) * (b.px - a.px)) 
+	+ ((b.py - a.py) * (b.py - a.py)));
+	return (result);
+}
+
+int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col, t_fov *fov, int *lock, float *max_dist)
 {
 	int			cut;
 	t_segment	*tmp;
+	t_point		tmp1;
+	int			checker;
+	float		dist;
 
 	tmp = NULL;
+	checker = 1;
 	if (node)
 	{
 		if (is_player_in_front(cub->player->camera->pos, node))
 		{
 			cut = 0;
 			if (node->splitter)
-				tmp = segment(node->splitter->segment);
-			if (is_in_front_of_player(cub, tmp, &cut, fov))
 			{
-				printf("cut:%d\n",cut);
-				draw_segment(node->splitter, map_editor, cub->tmp, col);
+				tmp = segment(node->splitter->segment);
+				if (is_in_front_of_player(cub, tmp, &cut, fov))
+				{
+					if (cut == 3 || *lock)
+					{
+						/*
+						if (cut == 3)
+							draw_segment(tmp, map_editor, cub->tmp, color(GREEN));
+						*/
+						tmp1.px = node->splitter->segment.a.px + node->splitter->segment.b.px;
+						tmp1.px = tmp1.px / 2.0;
+						tmp1.py = node->splitter->segment.a.py + node->splitter->segment.b.py;
+						tmp1.py = tmp1.py / 2.0;
+						dist = distance_between_points(tmp1, cub->player->camera->pos);
+						if (dist < *max_dist)
+						{
+							checker = 1;
+							*max_dist = dist;
+						}
+						else
+							checker = 0;
+						*lock = 1;
+					}
+					if (checker)
+						draw_segment(tmp, map_editor, cub->tmp, col);
+				}
 			}
 			free(tmp);
 		}
 		if (node->front)
-			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col, fov);
+			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col, fov, lock, max_dist);
 		if (node->back)
-			draw_bsp_segment_by_bbox(cub, node->back, map_editor, col, fov);
+			draw_bsp_segment_by_bbox(cub, node->back, map_editor, col, fov, lock, max_dist);
 	}
 }
 
 int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
 {
 	t_fov	fov;
+	int		lock;
+	float	max_dist;
 
+	lock = 0;
 	fov = make_fov(cub->player->camera->fov, cub->player->camera->angle);
+	max_dist = FLT_MAX;
 	if (cub->root_node)
-		draw_bsp_segment_by_bbox(cub, cub->root_node, map_editor, col, &fov);
+		draw_bsp_segment_by_bbox(cub, cub->root_node, map_editor, col, &fov, &lock, &max_dist);
 }
 
 int editor_mode(t_cub *cub)
