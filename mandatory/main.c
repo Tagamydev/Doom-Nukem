@@ -1358,14 +1358,19 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node)
 {
 	t_point		tmp;
 	t_point		pos;
+	t_point		screen_min;
+	t_point		screen_max;
 	t_point		fov1;
 	t_point		fov2;
+	t_segment	*tmp1;
 	t_segment	*tmp2;
 	t_segment	*tmp3;
 	int			result1;
 	int			result2;
 	int			result3;
 	int			result4;
+	int			result5;
+	int			result6;
 
 	if (!node)
 		return (0);
@@ -1374,18 +1379,35 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node)
 	tmp.py = node->splitter->segment.a.py + node->splitter->segment.b.py;
 	tmp.py = tmp.py / 2.0;
 	pos = cub->player->camera->pos;
+
+	screen_min = cub->player->camera->pos;
+	screen_max = cub->player->camera->pos;
+
+	screen_min.px -= cub->p_deltas.py;
+	screen_min.py += cub->p_deltas.px;
+	screen_max.px += cub->p_deltas.py;
+	screen_max.py -= cub->p_deltas.px;
+
 	fov1 = cub->player->camera->pos;
 	fov2 = cub->player->camera->pos;
 	fov1.px += cub->fov1_deltas.px;
 	fov1.py += cub->fov1_deltas.py;
 	fov2.px += cub->fov2_deltas.px;
 	fov2.py += cub->fov2_deltas.py;
+
+	tmp1 = segment(line(screen_min, screen_max));
+	if (!tmp1)
+		return (0);
 	tmp2 = segment(line(pos, fov1));
 	if (!tmp2)
+	{
+		free(tmp1);
 		return (0);
+	}
 	tmp3 = segment(line(fov2, pos));
 	if (!tmp3)
 	{
+		free(tmp1);
 		free(tmp2);
 		return (0);
 	}
@@ -1393,10 +1415,25 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node)
 	result2 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp2);
 	result3 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp3);
 	result4 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp3);
+
+	result5 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp1);
+	result6 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp1);
+
+	free(tmp1);
 	free(tmp2);
 	free(tmp3);
+
 	if ((result1 || result2) && (result3 || result4))
+	{
+		if ((result5 || result6))
+			return (1);
+		else
+			return (0);
+	}
+	/*
+	if ((result1 && result3 && result5) || (result2 && result4 && result6))
 		return (1);
+		*/
 	return (0);
 }
 
