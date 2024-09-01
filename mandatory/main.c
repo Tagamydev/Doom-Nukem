@@ -1543,7 +1543,6 @@ void	cut_segment(t_cub *cub, t_segment *seg, t_point fov1, t_point fov2, int cas
 		return ;
 	if (case_num == 1)
 	{
-		printf("case1\n");
 		tmp = line(cub->player->camera->pos, fov1);
 		error = 0;
 		cross = get_intersection_between_lines(tmp, seg->segment, &error);
@@ -1559,8 +1558,6 @@ void	cut_segment(t_cub *cub, t_segment *seg, t_point fov1, t_point fov2, int cas
 		if (error)
 			return ;
 		seg->segment.b = cross;
-
-		printf("case2\n");
 	}
 	else if (case_num == 3)
 	{
@@ -1570,13 +1567,9 @@ void	cut_segment(t_cub *cub, t_segment *seg, t_point fov1, t_point fov2, int cas
 		if (error)
 			return ;
 		seg->segment.a = cross;
-
-		printf("case3\n");
 	}
 	else if (case_num == 4)
 	{
-		printf("case4\n");
-
 		tmp = line(cub->player->camera->pos, fov2);
 		error = 0;
 		cross = get_intersection_between_lines(tmp, seg->segment, &error);
@@ -1586,18 +1579,27 @@ void	cut_segment(t_cub *cub, t_segment *seg, t_point fov1, t_point fov2, int cas
 	}
 	else if (case_num == 5)
 	{
-
-		printf("case5\n");
+		tmp = line(cub->player->camera->pos, fov2);
+		error = 0;
+		cross = get_intersection_between_lines(tmp, seg->segment, &error);
+		if (error)
+			return ;
+		seg->segment.b = cross;
+		tmp = line(cub->player->camera->pos, fov1);
+		error = 0;
+		cross = get_intersection_between_lines(tmp, seg->segment, &error);
+		if (error)
+			return ;
+		seg->segment.a = cross;
 	}
 }
 /*
 */
 
 int	update_player_angle_from_angle(t_cub *cub, float angle);
+
 int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 {
-	cub->player->camera->pos = point(1.569673, 7.532527);
-	update_player_angle_from_angle(cub, 276.348846);
 	t_point		tmp;
 	t_point		pos;
 	t_point		screen_min;
@@ -1714,60 +1716,37 @@ int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 		if (!(a_is_inside_fov || b_is_inside_fov) 
 		&& !(segment_intersect_with_fov1 && segment_intersect_with_fov2))
 			return (0);
-			//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
 		if (is_a_in_front_of_the_player && a_is_inside_fov && !b_is_inside_fov)
 		{
-			//i need to find b
 			if (segment_intersect_with_fov1)
-			{
-				printf("case1 \n");
-				draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
 				cut_segment(cub, seg, fov1, fov2, 1);
-				//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
-			}
 			if (segment_intersect_with_fov2)
-			{
-				draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
-				printf("case2 \n");
 				cut_segment(cub, seg, fov1, fov2, 2);
-				//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
-			}
 			return (1);
 		}
 		if (is_b_in_front_of_the_player && b_is_inside_fov && !a_is_inside_fov)
 		{
-			//i need to find a
 			if (segment_intersect_with_fov1)
-			{
-				draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
-				printf("case3 \n");
 				cut_segment(cub, seg, fov1, fov2, 3);
-				//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
-			}
 			if (segment_intersect_with_fov2)
-			{
-				draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
-				printf("case4 \n");
 				cut_segment(cub, seg, fov1, fov2, 4);
-				//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
-			}
 			return (1);
 		}
 		if (is_in_front_of_the_player)
 		{
-			draw_line_remap(seg->segment, cub->map_editor, cub->tmp, color(BLUE));
-			printf("case5 \n");
-			//i need to find a and b
+			*cut = 3;
 			cut_segment(cub, seg, fov1, fov2, 5);
-			//cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (is_a_in_front_of_the_player && is_b_in_front_of_the_player), is_a_in_front_of_fov1, is_b_in_front_of_fov1, is_a_in_front_of_fov2, is_b_in_front_of_fov2, segment_intersect_with_fov1, segment_intersect_with_fov2);
 			return (1);
 		}
 		if (segment_intersect_with_fov1 && segment_intersect_with_fov2)
 		{
+			if (!is_a_in_front_of_the_player && !is_b_in_front_of_the_player)
+				return (0);
 			if (is_b_in_front_of_fov2)
 				return (0);
 			if (is_a_in_front_of_the_player && is_a_in_front_of_fov1)
 				return (0);
+			*cut = 3;
 			cut_segment(cub, seg, fov1, fov2, 5);
 			return (1);
 		}
