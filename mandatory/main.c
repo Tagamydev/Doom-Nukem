@@ -1353,8 +1353,20 @@ int	check_point_in_front_of_segment(t_point pt, t_segment sp_seg)
 		return (0);
 	return (0);
 }
+int	free_is_in_front_of_player(void **a, void **b, void **c)
+{
+	if (*a)
+		free(a);
+	if (*b)
+		free(b);
+	if (*c)
+		free(c);
+	*a = NULL;
+	*b = NULL;
+	*c = NULL;
+}
 
-int	is_in_front_of_player(t_cub *cub, t_bsp *node)
+int	is_in_front_of_player(t_cub *cub, t_bsp *node, int *cut)
 {
 	t_point		tmp;
 	t_point		pos;
@@ -1419,22 +1431,34 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node)
 	result5 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp1);
 	result6 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp1);
 
+	int result7;
+	int	result8;
+
+
 	free(tmp1);
 	free(tmp2);
 	free(tmp3);
 
 	if ((result1 || result2) && (result3 || result4))
 	{
+		result7 = intersection_check(node->splitter->segment, line(pos, fov1));
+		result8 = intersection_check(node->splitter->segment, line(pos, fov2));
 		if ((result5 && result6))
+		{
+			*cut = (result7 * 1) + (result8 * 2);
 			return (1);
+		}
 		else
 		{
-			if (intersection_check(node->splitter->segment, line(pos, fov1)) ||
-			intersection_check(node->splitter->segment, line(pos, fov2)))
+			if (result7 || result8)
+			{
+				*cut = (result7 * 1) + (result8 * 2);
 				return (1);
+			}
 			return (0);
 		}
 	}
+
 	/*
 	if ((result1 && result3 && result5) || (result2 && result4 && result6))
 		return (1);
@@ -1449,12 +1473,16 @@ int	is_player_in_front(t_point pt, t_bsp *node)
 
 int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col)
 {
+	int	cut;
+
 	if (node)
 	{
 		if (is_player_in_front(cub->player->camera->pos, node))
 		{
-			if (is_in_front_of_player(cub, node))
+			cut = 0;
+			if (is_in_front_of_player(cub, node, &cut))
 			{
+				printf("cut:%d\n",cut);
 				draw_segment(node->splitter, map_editor, cub->tmp, col);
 			}
 		}
