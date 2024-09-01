@@ -1499,7 +1499,7 @@ int intersect_fov2)
 			seg->segment.a = cross;
 		}
 	}
-	else// if (is_in_front)
+	else if (is_in_front)
 	{
 		error = 0;
 		x = get_intersection_between_lines(fov1_l, seg->segment, &error);
@@ -1599,8 +1599,10 @@ int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 	{
 		result7 = intersection_check(seg->segment, line(pos, fov1));
 		result8 = intersection_check(seg->segment, line(pos, fov2));
+		/*
 		if (result7 || result8)
 			cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (result5 && result6), result1, result2, result3, result4, result7, result8);
+			*/
 		if ((result5 && result6))
 		{
 			*cut = (result7 * 1) + (result8 * 2);
@@ -1651,13 +1653,147 @@ int	draw_line_remap(t_line line, t_map_editor map_editor, t_img *img, t_color co
 	draw_line(a, b, img);
 }
 
-int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col, t_fov *fov, int *lock, float *max_dist)
+typedef	struct s_render_vertex
 {
-	int			cut;
-	t_segment	*tmp;
-	t_point		tmp1;
-	int			checker;
-	float		dist;
+	t_line	vertex;
+	float	min_dist;
+}				t_render_vertex;
+
+/*
+	from now, i have to remade everything so when i say new = malloc
+*/
+
+t_render_vertex	*new_render_vertex()
+{
+	t_render_vertex	*result;
+
+	result = malloc(sizeof(t_render_vertex));
+	if (!result)
+		return(NULL);
+	return (result);
+}
+
+t_render_vertex	*new_render_vertex_from_line(t_line line)
+{
+	t_render_vertex	*result;
+
+	result = new_render_vertex();
+	if (!result)
+		return(NULL);
+	result->vertex = line;
+	return (result);
+}
+
+float	get_min_dist(t_line line, t_point p)
+{
+	float dist1;
+	float dist2;
+
+	dist1 = distance_between_points(line.a, p);
+	dist2 = distance_between_points(line.b, p);
+	if (dist2 < dist1)
+		return (dist2);
+	return (dist1);
+}
+
+/*
+	insert in back of the referece node
+*/
+void	list_instert_back(t_list *list, t_node *node_to_instert, t_node *reference_node)
+{
+	t_node	*tmp_back;
+	t_node	*tmp_front;
+
+	tmp_front = reference_node;
+	tmp_back = NULL;
+	if (reference_node)
+		tmp_back = reference_node->back;
+	if (tmp_back)
+		tmp_back->next = node_to_instert;
+	node_to_instert->back = tmp_back;
+	if (tmp_front)
+		tmp_front->back = node_to_instert;
+	node_to_instert->next = tmp_front;
+	list->size++;
+}
+
+/*
+	insert in front of the referece node
+*/
+void	list_instert_front(t_list *list, t_node *node_to_insert, t_node *reference_node)
+{
+	t_node	*tmp_back;
+	t_node	*tmp_front;
+
+	tmp_back = reference_node;
+	tmp_front = NULL;
+	if (reference_node)
+		tmp_front = reference_node->next;
+	if (tmp_back)
+		tmp_back->next = node_to_insert;
+	node_to_insert->back = tmp_back;
+	if (tmp_front)
+		tmp_front->back = node_to_insert;
+	node_to_insert->next = tmp_front;
+	list->size++;
+}
+
+void	insert_vertex_to_render(t_render_vertex *node_to_insert, t_list *render_list)
+{
+	t_node			*tmp;
+	t_node			*tail;
+	t_render_vertex	*tmp_vertex;
+
+	tmp_vertex = NULL;
+	tmp = render_list->head;
+	tail = render_list->tail;
+	if (tail)
+	{
+		tmp_vertex = tail->content;
+		if (tmp_vertex)
+		{
+			if (node_to_insert->min_dist > tmp_vertex->min_dist)
+			{
+				list_push_b(render_list, node(node_to_insert, &default_node_free));
+				return ;
+			}
+		}
+	}
+	if (tmp)
+	{
+		tmp_vertex = tmp->content;
+		if (tmp_vertex)
+		{
+			if (node_to_insert->min_dist < tmp_vertex->min_dist)
+			{
+				list_push_f(render_list, node(node_to_insert, &default_node_free));
+				return ;
+			}
+		}
+	}
+	while (tmp)
+	{
+		tmp_vertex = tmp->content;
+		if (node_to_insert->min_dist < tmp_vertex->min_dist)
+		{
+			list_instert_back(render_list, node(node_to_insert, &default_node_free), tmp);
+			return ;
+		}
+		tmp = tmp->next;
+	}
+	list_push_b(render_list, node(node_to_insert, &default_node_free));
+	return ;
+}
+
+int	get_render_vertex_from_bsp(t_cub *cub, t_bsp *node, t_fov *fov, int *lock, float *max_dist, t_list *render_list)
+{
+	int				cut;
+	t_segment		*tmp;
+	t_point			tmp1;
+	t_render_vertex	*tmp2;
+	int				checker;
+	float			dist;
+	float			min_dist;
 
 	tmp = NULL;
 	checker = 1;
@@ -1688,16 +1824,29 @@ int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t
 						*lock = 1;
 					}
 					if (checker)
-						draw_line_remap(tmp->segment, map_editor, cub->tmp, col);
+					{
+						min_dist = get_min_dist(tmp->segment, cub->player->camera->pos);
+						tmp2 = new_render_vertex_from_line(tmp->segment);
+						if (!tmp2)
+						{
+							free(tmp);
+							return (0);
+						}
+						tmp2->min_dist = min_dist;
+						insert_vertex_to_render(tmp2, render_list);
+						draw_line_remap(tmp->segment, cub->map_editor, cub->tmp, color(GREEN));
+					}
 				}
 			}
 			free(tmp);
+			draw_line_remap(node->splitter->segment, cub->map_editor, cub->tmp, color(BLUE));
 		}
 		if (node->front)
-			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col, fov, lock, max_dist);
+			get_render_vertex_from_bsp(cub, node->front, fov, lock, max_dist, render_list);
 		if (node->back)
-			draw_bsp_segment_by_bbox(cub, node->back, map_editor, col, fov, lock, max_dist);
+			get_render_vertex_from_bsp(cub, node->back, fov, lock, max_dist, render_list);
 	}
+	return (1);
 }
 
 int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
@@ -1705,12 +1854,24 @@ int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
 	t_fov	fov;
 	int		lock;
 	float	max_dist;
+	t_list	render_list;
 
 	lock = 0;
 	fov = make_fov(cub->player->camera->fov, cub->player->camera->angle);
 	max_dist = FLT_MAX;
+	render_list = list(NULL);
 	if (cub->root_node)
-		draw_bsp_segment_by_bbox(cub, cub->root_node, map_editor, col, &fov, &lock, &max_dist);
+		get_render_vertex_from_bsp(cub, cub->root_node, &fov, &lock, &max_dist, &render_list);
+	t_node	*tmp;
+	t_render_vertex	*tmp1;
+
+	tmp = render_list.head;
+	while (tmp)
+	{
+		tmp1 = tmp->content;
+		draw_line_remap(tmp1->vertex, map_editor, cub->tmp, color(RED));
+		tmp = tmp->next;
+	}
 }
 
 int editor_mode(t_cub *cub)
