@@ -1223,8 +1223,25 @@ t_bbox_sides	bbox_sides(t_line a, t_line b, int size)
 	return (result);
 }
 
-int	this_bbox_intersect(t_cub *cub, t_bbox_2d bbox)
+float	point_to_angle(t_point pos, t_point pt)
 {
+	t_point	delta;
+	float	angle;
+
+	delta.px = pt.px - pos.px;
+	delta.py = pt.py - pos.py;
+	angle = (atan2(delta.py, delta.px));
+	angle = angle * (180.0 / PI);
+	return (angle);
+}
+
+int	norm(float angle)
+{
+	return ((int)angle % 360);
+}
+
+// no quiero hacer esto otra vez;
+	/*
 	float	min_px;
 	float	min_py;
 	float	max_px;
@@ -1248,6 +1265,7 @@ int	this_bbox_intersect(t_cub *cub, t_bbox_2d bbox)
 	b = point(min_px, max_py);
 	c = point(max_px, max_py);
 	d = point(max_px, min_py);
+	bs = bbox_sides(line(b, a), line(c, b), 2);
 	if (pos.px < min_px)
 	{
 		if (pos.py > max_py)
@@ -1276,19 +1294,52 @@ int	this_bbox_intersect(t_cub *cub, t_bbox_2d bbox)
 			return (1);
 	}
 
-	/*
-	srand(bbox.a.a.px);
-	last = color_from_rgb(rand(), rand(), rand());
-	draw_bbox(bbox, cub->map_editor, last, cub->tmp);
+	int i;
+	float	angle1;
+	float	angle2;
+	int		span;
+	int		span1;
+
+	i = 0;
+	while (i < bs.size)
+	{
+		if (i == 0)
+		{
+			angle1 = point_to_angle(pos, bs.a);
+			angle2 = point_to_angle(pos, bs.b);
+		}
+		else
+		{
+			angle1 = point_to_angle(pos, bs.c);
+			angle2 = point_to_angle(pos, bs.d);
+		}
+
+		span = norm(angle1 - angle2);
+		angle1 -= cub->player->camera->angle;
+		span1 = norm(angle1 + (cub->player->camera->fov / 2.0));
+		if (span1 > (int)cub->player->camera->fov)
+		{
+			if (!(span1 >= span + cub->player->camera->fov))
+				return (1);
+		}
+		i++;
+	}
+	return (0);
 	*/
+
+
+//t_polygon square(t_line a, t_line b)
+
+int	is_in_front_of_player(t_cub *cub, t_bsp *node)
+{
+	if (!node)
+		return (0);
+
 	return (1);
 }
 
 int	is_player_in_front(t_point pt, t_bsp *node)
 {
-	t_point	player;
-
-	player = pt;
 	t_segment	*splitter_seg;
 	float		numerator;
 	float		denominator;
@@ -1300,10 +1351,10 @@ int	is_player_in_front(t_point pt, t_bsp *node)
 	splitter_seg = node->splitter;
 	numerator = cross_2d(
 	point(
-	player.px - splitter_seg->segment.a.px, 
-	player.py - splitter_seg->segment.a.py
+	pt.px - splitter_seg->segment.a.px, 
+	pt.py - splitter_seg->segment.a.py
 	), splitter_seg->vector);
-	denominator = cross_2d(splitter_seg->vector, player);
+	denominator = cross_2d(splitter_seg->vector, pt);
 
 	denominator_is_zero = ft_abs(denominator) < EPS;
 	numerator_is_zero = ft_abs(numerator) < EPS;
@@ -1322,10 +1373,15 @@ int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t
 	if (node)
 	{
 		if (is_player_in_front(cub->player->camera->pos, node))
-			draw_segment(node->splitter, map_editor, cub->tmp, col);
-		if (node->front && this_bbox_intersect(cub, node->front_bbox))
+		{
+			if (is_in_front_of_player(cub, node))
+				draw_segment(node->splitter, map_editor, cub->tmp, col);
+		}
+		if (is_in_front_of_player(cub, node->front))
 			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col);
-		if (node->back && this_bbox_intersect(cub, node->back_bbox))
+	//	if (node->front)// && this_bbox_intersect(cub, node->front_bbox))
+	//	if (node->back)// && this_bbox_intersect(cub, node->back_bbox))
+		if (is_in_front_of_player(cub, node->back))
 			draw_bsp_segment_by_bbox(cub, node->back, map_editor, col);
 	}
 }
@@ -1351,7 +1407,7 @@ int editor_mode(t_cub *cub)
 	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(0, 0, 0));
 	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(50, 50, 50));
 
-	draw_bsp(cub, last, color(BLACK), 0);
+	//draw_bsp(cub, last, color(BLACK), 0);
 	//draw_bsp(cub, cub->map_editor, color(WHITE), 0);
 
 	draw_fov_intersection(cub, last, color(BLACK));
