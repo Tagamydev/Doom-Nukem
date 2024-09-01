@@ -1499,7 +1499,7 @@ int intersect_fov2)
 			seg->segment.a = cross;
 		}
 	}
-	else if (is_in_front)
+	else// if (is_in_front)
 	{
 		error = 0;
 		x = get_intersection_between_lines(fov1_l, seg->segment, &error);
@@ -1639,6 +1639,18 @@ float	distance_between_points(t_point a, t_point b)
 	return (result);
 }
 
+int	draw_line_remap(t_line line, t_map_editor map_editor, t_img *img, t_color col)
+{
+	t_point	a;
+	t_point	b;
+
+	a = remap_point(line.a, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+	b = remap_point(line.b, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+	a.color = col;
+	b.color = col;
+	draw_line(a, b, img);
+}
+
 int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col, t_fov *fov, int *lock, float *max_dist)
 {
 	int			cut;
@@ -1661,10 +1673,6 @@ int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t
 				{
 					if (cut == 3 || *lock)
 					{
-						/*
-						if (cut == 3)
-							draw_segment(tmp, map_editor, cub->tmp, color(GREEN));
-						*/
 						tmp1.px = node->splitter->segment.a.px + node->splitter->segment.b.px;
 						tmp1.px = tmp1.px / 2.0;
 						tmp1.py = node->splitter->segment.a.py + node->splitter->segment.b.py;
@@ -1680,9 +1688,7 @@ int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t
 						*lock = 1;
 					}
 					if (checker)
-						draw_segment(tmp, map_editor, cub->tmp, col);
-					/*
-						*/
+						draw_line_remap(tmp->segment, map_editor, cub->tmp, col);
 				}
 			}
 			free(tmp);
