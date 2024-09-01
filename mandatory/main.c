@@ -1330,17 +1330,8 @@ int	norm(float angle)
 
 //t_polygon square(t_line a, t_line b)
 
-int	is_in_front_of_player(t_cub *cub, t_bsp *node)
+int	check_point_in_front_of_segment(t_point pt, t_segment sp_seg)
 {
-	if (!node)
-		return (0);
-
-	return (1);
-}
-
-int	is_player_in_front(t_point pt, t_bsp *node)
-{
-	t_segment	*splitter_seg;
 	float		numerator;
 	float		denominator;
 	int			denominator_is_zero;
@@ -1348,13 +1339,8 @@ int	is_player_in_front(t_point pt, t_bsp *node)
 	float		intersection;
 	t_point		intersection_pt;
 
-	splitter_seg = node->splitter;
-	numerator = cross_2d(
-	point(
-	pt.px - splitter_seg->segment.a.px, 
-	pt.py - splitter_seg->segment.a.py
-	), splitter_seg->vector);
-	denominator = cross_2d(splitter_seg->vector, pt);
+	numerator = cross_2d(point(pt.px - sp_seg.segment.a.px, pt.py - sp_seg.segment.a.py), sp_seg.vector);
+	denominator = cross_2d(sp_seg.vector, pt);
 
 	denominator_is_zero = ft_abs(denominator) < EPS;
 	numerator_is_zero = ft_abs(numerator) < EPS;
@@ -1368,6 +1354,47 @@ int	is_player_in_front(t_point pt, t_bsp *node)
 	return (0);
 }
 
+int	is_in_front_of_player(t_cub *cub, t_bsp *node)
+{
+	t_point		tmp;
+	t_point		pos;
+	t_point		screen_min;
+	t_point		screen_max;
+	t_segment	*tmp2;
+	int			result;
+	int			result1;
+	int			result2;
+
+	if (!node)
+		return (0);
+	tmp.px = node->splitter->segment.a.px + node->splitter->segment.b.px;
+	tmp.px = tmp.px / 2.0;
+	tmp.py = node->splitter->segment.a.py + node->splitter->segment.b.py;
+	tmp.py = tmp.py / 2.0;
+	pos = cub->player->camera->pos;
+	screen_min = cub->player->camera->pos;
+	screen_max = cub->player->camera->pos;
+	screen_min.px -= cub->p_deltas.py * (cub->player->camera->fov / 2.0);
+	screen_min.py += cub->p_deltas.px * (cub->player->camera->fov / 2.0);
+	screen_max.px += cub->p_deltas.py * (cub->player->camera->fov / 2.0);
+	screen_max.py -= cub->p_deltas.px * (cub->player->camera->fov / 2.0);
+	tmp2 = segment(line(screen_min, screen_max));
+	if (!tmp2)
+		return (0);
+	result = check_point_in_front_of_segment(tmp, *tmp2);
+	result1 = check_point_in_front_of_segment(node->splitter->segment.a, *tmp2);
+	result2 = check_point_in_front_of_segment(node->splitter->segment.b, *tmp2);
+	free(tmp2);
+	if (result || result1 || result2)
+		return (1);
+	return (0);
+}
+
+int	is_player_in_front(t_point pt, t_bsp *node)
+{
+	return (check_point_in_front_of_segment(pt, *(node->splitter)));
+}
+
 int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t_color col)
 {
 	if (node)
@@ -1377,11 +1404,9 @@ int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t
 			if (is_in_front_of_player(cub, node))
 				draw_segment(node->splitter, map_editor, cub->tmp, col);
 		}
-		if (is_in_front_of_player(cub, node->front))
+		if (node->front)
 			draw_bsp_segment_by_bbox(cub, node->front, map_editor, col);
-	//	if (node->front)// && this_bbox_intersect(cub, node->front_bbox))
-	//	if (node->back)// && this_bbox_intersect(cub, node->back_bbox))
-		if (is_in_front_of_player(cub, node->back))
+		if (node->back)
 			draw_bsp_segment_by_bbox(cub, node->back, map_editor, col);
 	}
 }
