@@ -1469,8 +1469,7 @@ int intersect_fov2)
 			cross = get_intersection_between_lines(fov1_l, seg->segment, &error);
 			if (error)
 				return ;
-			draw_segment(segment(fov1_l), cub->map_editor, cub->tmp, color(RED));
-			draw_segment(segment(line(pos, cross)), cub->map_editor, cub->tmp, color(GREEN));
+			seg->segment.b = cross;
 		}
 		if (intersect_fov2)
 		{
@@ -1478,9 +1477,7 @@ int intersect_fov2)
 			cross = get_intersection_between_lines(fov2_l, seg->segment, &error);
 			if (error)
 				return ;
-
-			draw_segment(segment(fov2_l), cub->map_editor, cub->tmp, color(RED));
-			draw_segment(segment(line(pos, cross)), cub->map_editor, cub->tmp, color(GREEN));
+			seg->segment.b = cross;
 		}
 	}
 	else if (if_segment_b_is_in_front_of_fov1 && if_segment_b_is_in_front_of_fov2)
@@ -1491,9 +1488,7 @@ int intersect_fov2)
 			cross = get_intersection_between_lines(fov1_l, seg->segment, &error);
 			if (error)
 				return ;
-
-			draw_segment(segment(fov1_l), cub->map_editor, cub->tmp, color(BLUE));
-			draw_segment(segment(line(pos, cross)), cub->map_editor, cub->tmp, color(GREEN));
+			seg->segment.a = cross;
 		}
 		if (intersect_fov2)
 		{
@@ -1501,9 +1496,7 @@ int intersect_fov2)
 			cross = get_intersection_between_lines(fov2_l, seg->segment, &error);
 			if (error)
 				return ;
-
-			draw_segment(segment(fov2_l), cub->map_editor, cub->tmp, color(BLUE));
-			draw_segment(segment(line(pos, cross)), cub->map_editor, cub->tmp, color(GREEN));
+			seg->segment.a = cross;
 		}
 	}
 	else if (is_in_front)
