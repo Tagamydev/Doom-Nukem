@@ -982,8 +982,8 @@ int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
 	draw_circle(5, cub->tmp, color_point(last_pos, color(BLACK)));
 	draw_circle(5, cub->tmp, color_point(pos, col));
 
-	draw_line(last_pos, last_fov1, cub->tmp);
-	draw_line(last_pos, last_fov2, cub->tmp);
+//	draw_line(last_pos, last_fov1, cub->tmp);
+//	draw_line(last_pos, last_fov2, cub->tmp);
 
 	last_pos = pos;
 	last_fov1 = fov1;
@@ -993,8 +993,8 @@ int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
 	fov1.color = col;
 	fov2.color = col;
 
-	draw_line(pos, fov1, cub->tmp);
-	draw_line(pos, fov2, cub->tmp);
+//	draw_line(pos, fov1, cub->tmp);
+//	draw_line(pos, fov2, cub->tmp);
 }
 
 t_line	bbox_intersect_make_fov(t_point delta, t_point pos)
@@ -1415,10 +1415,102 @@ t_fov	make_fov(float fov, float angle)
 	return (result);
 }
 
-void	cut_segment(int *cut, t_segment *seg)
+float	det(t_point a, t_point b)
 {
-	;
+	return(a.px * b.py - a.py * b.px);
+}
 
+t_point	get_intersection_between_lines(t_line line1, t_line line2, int *error)
+{
+	t_point	xdiff;
+	t_point	ydiff;
+	t_point	d;
+	float	div;
+	float	x;
+	float	y;
+
+	xdiff = point(line1.a.px - line1.b.px, line2.a.px - line2.b.px);
+	ydiff = point(line1.a.py - line1.b.py, line2.a.py - line2.b.py);
+	div = det(xdiff, ydiff);
+	if (div < EPS || div == 0)
+	{
+		*error = 1;
+		return(point(0, 0));
+	}
+	d = point(det(line1.a, line1.b), det(line2.a, line2.b));
+	x = det(d, xdiff) / div;
+	y = det(d, ydiff) / div;
+	return (point(x, y));
+}
+
+void	cut_segment(t_cub *cub, int *cut, t_segment *seg, t_fov *fov, t_point fov1, t_point fov2, t_point pos, 
+int is_in_front, 
+int if_segment_a_is_in_front_of_fov1, 
+int if_segment_b_is_in_front_of_fov1, 
+int if_segment_a_is_in_front_of_fov2, 
+int if_segment_b_is_in_front_of_fov2,
+int intersect_fov1,
+int intersect_fov2)
+{
+	int	error;
+	t_line	fov1_l;
+	t_line	fov2_l;
+	t_point	cross;
+
+	fov1_l = line(pos, fov1);
+	fov2_l = line(pos, fov2);
+//	draw_segment(segment(fov1_l), cub->map_editor, cub->tmp, color(GREEN));
+//	draw_segment(segment(fov2_l), cub->map_editor, cub->tmp, color(GREEN));
+	if (if_segment_a_is_in_front_of_fov1 && if_segment_a_is_in_front_of_fov2)
+	{
+		if (intersect_fov1)
+		{
+			error = 0;
+			cross = get_intersection_between_lines(fov1_l, seg->segment, &error);
+			if (error)
+				return ;
+			draw_segment(segment(fov1_l), cub->map_editor, cub->tmp, color(RED));
+			draw_segment(segment(line(pos, cross)), cub->map_editor, cub->tmp, color(GREEN));
+		}
+		if (intersect_fov2)
+		{
+			error = 0;
+			cross = get_intersection_between_lines(fov2_l, seg->segment, &error);
+			if (error)
+				return ;
+
+			draw_segment(segment(fov2_l), cub->map_editor, cub->tmp, color(RED));
+			draw_segment(segment(line(pos, cross)), cub->map_editor, cub->tmp, color(GREEN));
+		}
+	}
+	else if (if_segment_b_is_in_front_of_fov1 && if_segment_b_is_in_front_of_fov2)
+	{
+		if (intersect_fov1)
+		{
+			error = 0;
+			cross = get_intersection_between_lines(fov1_l, seg->segment, &error);
+			if (error)
+				return ;
+
+			draw_segment(segment(fov1_l), cub->map_editor, cub->tmp, color(BLUE));
+			draw_segment(segment(line(pos, cross)), cub->map_editor, cub->tmp, color(GREEN));
+		}
+		if (intersect_fov2)
+		{
+			error = 0;
+			cross = get_intersection_between_lines(fov2_l, seg->segment, &error);
+			if (error)
+				return ;
+
+			draw_segment(segment(fov2_l), cub->map_editor, cub->tmp, color(BLUE));
+			draw_segment(segment(line(pos, cross)), cub->map_editor, cub->tmp, color(GREEN));
+		}
+	}
+	else if (is_in_front)
+	{
+		draw_segment(segment(fov1_l), cub->map_editor, cub->tmp, color(WHITE));
+		draw_segment(segment(fov2_l), cub->map_editor, cub->tmp, color(WHITE));
+	}
 }
 
 int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
@@ -1498,11 +1590,11 @@ int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 	{
 		result7 = intersection_check(seg->segment, line(pos, fov1));
 		result8 = intersection_check(seg->segment, line(pos, fov2));
+		if (result7 || result8)
+			cut_segment(cub, cut, seg, fov, fov1, fov2, pos, (result5 && result6), result1, result2, result3, result4, result7, result8);
 		if ((result5 && result6))
 		{
 			*cut = (result7 * 1) + (result8 * 2);
-			if (*cut)
-				cut_segment(cut, seg);
 			return (1);
 		}
 		else
@@ -1512,8 +1604,6 @@ int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 				if ((result5 && result6))
 				{
 					*cut = (result7 * 1) + (result8 * 2);
-					if (*cut)
-						cut_segment(cut, seg);
 				}
 				return (1);
 			}
@@ -1584,6 +1674,8 @@ int	draw_bsp_segment_by_bbox(t_cub *cub, t_bsp *node, t_map_editor map_editor, t
 					}
 					if (checker)
 						draw_segment(tmp, map_editor, cub->tmp, col);
+					/*
+						*/
 				}
 			}
 			free(tmp);
