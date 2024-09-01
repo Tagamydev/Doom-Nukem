@@ -966,11 +966,11 @@ int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
 
 	pos = cub->player->camera->pos;
 
-	fov1 = point(pos.px + (3.0  * cub->fov1_deltas.px), 
-	pos.py + (3.0  * cub->fov1_deltas.py));
+	fov1 = point(pos.px + (13.0  * cub->fov1_deltas.px), 
+	pos.py + (13.0  * cub->fov1_deltas.py));
 
-	fov2 = point(pos.px + (3.0  * cub->fov2_deltas.px), 
-	pos.py + (3.0  * cub->fov2_deltas.py));
+	fov2 = point(pos.px + (13.0  * cub->fov2_deltas.px), 
+	pos.py + (13.0  * cub->fov2_deltas.py));
 
 
 	pos = remap_point(pos, map_editor.screen_zoom, map_editor.screen_center, cub->tmp->resolution);
@@ -1390,10 +1390,10 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node)
 
 	fov1 = cub->player->camera->pos;
 	fov2 = cub->player->camera->pos;
-	fov1.px += cub->fov1_deltas.px;
-	fov1.py += cub->fov1_deltas.py;
-	fov2.px += cub->fov2_deltas.px;
-	fov2.py += cub->fov2_deltas.py;
+	fov1.px += cub->fov1_deltas.px * 100.0f;
+	fov1.py += cub->fov1_deltas.py * 100.0f;
+	fov2.px += cub->fov2_deltas.px * 100.0f;
+	fov2.py += cub->fov2_deltas.py * 100.0f;
 
 	tmp1 = segment(line(screen_min, screen_max));
 	if (!tmp1)
@@ -1425,10 +1425,15 @@ int	is_in_front_of_player(t_cub *cub, t_bsp *node)
 
 	if ((result1 || result2) && (result3 || result4))
 	{
-		if ((result5 || result6))
+		if ((result5 && result6))
 			return (1);
 		else
+		{
+			if (intersection_check(node->splitter->segment, line(pos, fov1)) ||
+			intersection_check(node->splitter->segment, line(pos, fov2)))
+				return (1);
 			return (0);
+		}
 	}
 	/*
 	if ((result1 && result3 && result5) || (result2 && result4 && result6))
