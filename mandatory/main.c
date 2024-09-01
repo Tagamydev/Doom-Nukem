@@ -982,8 +982,8 @@ int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
 	draw_circle(5, cub->tmp, color_point(last_pos, color(BLACK)));
 	draw_circle(5, cub->tmp, color_point(pos, col));
 
-//	draw_line(last_pos, last_fov1, cub->tmp);
-//	draw_line(last_pos, last_fov2, cub->tmp);
+	draw_line(last_pos, last_fov1, cub->tmp);
+	draw_line(last_pos, last_fov2, cub->tmp);
 
 	last_pos = pos;
 	last_fov1 = fov1;
@@ -993,8 +993,8 @@ int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
 	fov1.color = col;
 	fov2.color = col;
 
-//	draw_line(pos, fov1, cub->tmp);
-//	draw_line(pos, fov2, cub->tmp);
+	draw_line(pos, fov1, cub->tmp);
+	draw_line(pos, fov2, cub->tmp);
 }
 
 t_line	bbox_intersect_make_fov(t_point delta, t_point pos)
@@ -1455,12 +1455,12 @@ int intersect_fov2)
 	int	error;
 	t_line	fov1_l;
 	t_line	fov2_l;
+	t_point	x;
+	t_point	y;
 	t_point	cross;
 
 	fov1_l = line(pos, fov1);
 	fov2_l = line(pos, fov2);
-//	draw_segment(segment(fov1_l), cub->map_editor, cub->tmp, color(GREEN));
-//	draw_segment(segment(fov2_l), cub->map_editor, cub->tmp, color(GREEN));
 	if (if_segment_a_is_in_front_of_fov1 && if_segment_a_is_in_front_of_fov2)
 	{
 		if (intersect_fov1)
@@ -1501,8 +1501,24 @@ int intersect_fov2)
 	}
 	else if (is_in_front)
 	{
-		draw_segment(segment(fov1_l), cub->map_editor, cub->tmp, color(WHITE));
-		draw_segment(segment(fov2_l), cub->map_editor, cub->tmp, color(WHITE));
+		error = 0;
+		x = get_intersection_between_lines(fov1_l, seg->segment, &error);
+		if (error)
+			return ;
+		error = 0;
+		y = get_intersection_between_lines(fov2_l, seg->segment, &error);
+		if (error)
+			return ;
+		if (if_segment_a_is_in_front_of_fov1)
+		{
+			seg->segment.a = y;
+			seg->segment.b = x;
+		}
+		else
+		{
+			seg->segment.a = x;
+			seg->segment.b = y;
+		}
 	}
 }
 
@@ -1595,9 +1611,7 @@ int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 			if (result7 || result8)
 			{
 				if ((result5 && result6))
-				{
 					*cut = (result7 * 1) + (result8 * 2);
-				}
 				return (1);
 			}
 			return (0);
