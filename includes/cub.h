@@ -35,46 +35,77 @@ typedef enum e_game_mode
 	EDITOR
 }				t_game_mode;
 
+typedef	struct s_hooks
+{
+	int	(*option1)();
+	int	(*option2)();
+}				t_hooks;
+
+typedef struct s_win_hooks
+{
+	t_hooks	mouse;
+	t_hooks	key;
+	t_hooks	focus;
+}				t_win_hooks;
+
+typedef struct s_win
+{
+	void			*mlx_win;
+	void			*data;
+	t_resolution	res;
+	unsigned int	id;
+}				t_win;
+
+typedef struct s_triple_buff_img
+{
+	t_img			*render;
+	t_img			*buffer_a;
+	t_img			*buffer_b;
+}				t_triple_buff_img;
+
 typedef struct s_cub
 {
 
-	t_list			segments;
-	t_map_editor	map_editor;
+	t_list				segments;
+	t_map_editor		map_editor;
 
-	void			*mlx;
-	void			*mlx_win;
-	unsigned int	frame;
-	double			delta_time;
-	t_game_mode		game_mode;
-	int				focus;
-	int				mouse_press;
-	t_point			last_mouse_grab;
+	void				*mlx;
+	t_win				*main_window;
 
-	t_img			*tmp;
+	unsigned int		frame;
+	double				delta_time;
+	t_game_mode			game_mode;
+	int					focus;
+	int					mouse_press;
+	t_point				last_mouse_grab;
 
-	char			*north_path;
-	char			*south_path;
-	char			*east_path;
-	char			*west_path;
-	t_color			floor;
-	t_color			celling;
-	char			**map;
+	t_triple_buff_img	*editor_img;
+
+
+
+	char				*north_path;
+	char				*south_path;
+	char				*east_path;
+	char				*west_path;
+	t_color				floor;
+	t_color				celling;
+	char				**map;
 
 	// PLAYER
-	t_player		*player;
-	t_point			p_deltas;
-	t_point			fov1_deltas;
-	t_point			fov2_deltas;
-	t_point			fov1_screen;
-	t_point			fov2_screen;
+	t_player			*player;
+	t_point				p_deltas;
+	t_point				fov1_deltas;
+	t_point				fov2_deltas;
+	t_point				fov1_screen;
+	t_point				fov2_screen;
 
 
-	t_bsp			*root_node;
+	t_bsp				*root_node;
 
-	t_img			*north;
-	t_img			*south;
-	t_img			*east;
-	t_img			*west;
+	t_img				*north;
+	t_img				*south;
+	t_img				*east;
+	t_img				*west;
 }               t_cub;
 
 #endif

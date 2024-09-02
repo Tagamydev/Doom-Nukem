@@ -24,8 +24,6 @@ void	free_gen_struct(t_cub *cub)
 	{		
 		if (cub->mlx)
 			free(cub->mlx);
-		if (cub->mlx_win)
-			free(cub->mlx_win);
 
 		if (cub->north_path)
 			free(cub->north_path);
@@ -96,9 +94,6 @@ int	init_gen_struct(t_cub *cub, char *map_path)
 	if (!cub->mlx)
 		return (i_g_s_error(cub));
 	// CHANGE THIS RESOLUTION AFTER!!!!
-	cub->mlx_win = mlx_new_window(cub->mlx, 1920, 1080, "Default Windows");
-	if (!cub->mlx_win)
-		return (i_g_s_error(cub));
 	if (!parsing(cub, map_path))
 		return (i_g_s_error(cub));
 	if (!open_wall_tex(cub))
@@ -281,9 +276,9 @@ typedef struct s_map_editor
 */
 // the map editor type comes with the engine
 
-t_map_editor	new_map_editor();
+t_map_editor	map_editor();
 
-t_map_editor	new_map_editor()
+t_map_editor	map_editor()
 {
 	t_map_editor	result;
 
@@ -786,16 +781,17 @@ int	pause_mode(t_cub *cub)
 	static	int		sign = 1;
 
 	if (cub->game_mode != PAUSE)
-		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
-		//fill_img(cub->tmp, color_from_rgb(255, 0, 0));
+		fill_img(cub->editor_img->render, color_from_rgb(0, 0, 0));
+		//fill_img(cub->editor_img->render, color_from_rgb(255, 0, 0));
 	cub->game_mode = change_game_mode(PAUSE);
 
-	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(255, 0, 0)));
+	draw_circle(50, cub->editor_img->render, color_point(point(x, 200), color_from_rgb(255, 0, 0)));
 	x += (float)100 * (float)sign * cub->delta_time;
-	mlx_mouse_show(cub->mlx, cub->mlx_win);
 
-	draw_circle(50, cub->tmp, color_point(point(x, 200), color_from_rgb(255, 255, 255)));
-	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
+	mlx_mouse_show(cub->mlx, cub->main_window->mlx_win);
+
+	draw_circle(50, cub->editor_img->render, color_point(point(x, 200), color_from_rgb(255, 255, 255)));
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 	return (1);
 }
 
@@ -831,7 +827,7 @@ int	draw_grid(t_map_editor editor, t_img *img, t_color color)
 	}
 }
 
-t_point	mouse_pos_relative(t_cub *cub)
+t_point	mouse_pos_relative(t_cub *cub, t_win *win)
 {
 	t_point	result;
 	int		x;
@@ -840,7 +836,7 @@ t_point	mouse_pos_relative(t_cub *cub)
 	x = 0;
 	y = 0;
 	result = cub->map_editor.screen_center;
-	mlx_mouse_get_pos(cub->mlx, cub->mlx_win, &x, &y);
+	mlx_mouse_get_pos(cub->mlx, win->mlx_win, &x, &y);
 
 	result.px = cub->last_mouse_grab.px - x;
 	result.py = cub->last_mouse_grab.py - y;
@@ -881,32 +877,32 @@ int	draw_bbox(t_bbox_2d bbox, t_map_editor map_editor, t_color color, t_img *img
 	draw_line(p3, p1, img);
 }
 
-int	draw_bsp_node(t_bsp *node, t_cub *cub, t_map_editor map_editor, t_color col, int mode)
+int	draw_bsp_node(t_bsp *node, t_cub *cub, t_map_editor map_editor, t_color col, int mode, t_img *img)
 {
 	if (node)
 	{
-		draw_segment(node->splitter, map_editor, cub->tmp, col);
+		draw_segment(node->splitter, map_editor, img, col);
 		if (col.hex != color(BLACK).hex)
 		{
-			draw_bbox(node->back_bbox, map_editor, color(RED), cub->tmp);
-			draw_bbox(node->front_bbox, map_editor, color(GREEN), cub->tmp);
+			draw_bbox(node->back_bbox, map_editor, color(RED), img);
+			draw_bbox(node->front_bbox, map_editor, color(GREEN), img);
 		}
 		else
 		{
-			draw_bbox(node->back_bbox, map_editor, col, cub->tmp);
-			draw_bbox(node->front_bbox, map_editor, col, cub->tmp);
+			draw_bbox(node->back_bbox, map_editor, col, img);
+			draw_bbox(node->front_bbox, map_editor, col, img);
 		}
 		if (!mode)
 		{
 			if (node->front)
-				draw_bsp_node(node->front, cub, map_editor, col, mode);
+				draw_bsp_node(node->front, cub, map_editor, col, mode, img);
 			if (node->back)
-				draw_bsp_node(node->back, cub, map_editor, col, mode);
+				draw_bsp_node(node->back, cub, map_editor, col, mode, img);
 		}
 	}
 }
 
-int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col, int mode)
+int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col, int mode, t_img *img)
 {
 	static	t_bsp	*root = NULL;
 	static	t_bsp	*last_root = NULL;
@@ -924,8 +920,8 @@ int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col, int mode)
 		if (root)
 		{
 			if (last_root)
-				draw_bsp_node(last_root, cub, map_editor, color(BLACK), mode);
-			draw_bsp_node(root, cub, map_editor, col, mode);
+				draw_bsp_node(last_root, cub, map_editor, color(BLACK), mode, img);
+			draw_bsp_node(root, cub, map_editor, col, mode, img);
 			if (frame > 10)
 			{
 				last_root = root;
@@ -939,11 +935,11 @@ int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col, int mode)
 		tmp_root = cub->root_node;
 
 		if (tmp_root)
-			draw_bsp_node(tmp_root, cub, map_editor, col, mode);
+			draw_bsp_node(tmp_root, cub, map_editor, col, mode, img);
 	}
 }
 
-int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
+int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col, t_img *img)
 {
 	// para comprobar la bbox del player y un sector simplemente saca el angulo entre el player y el pt medio del sector
 	static	t_point	last_pos = {0};
@@ -962,17 +958,17 @@ int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
 	pos.py + (13.0  * cub->fov2_deltas.py));
 
 
-	pos = remap_point(pos, map_editor.screen_zoom, map_editor.screen_center, cub->tmp->resolution);
-	fov1 = remap_point(fov1, map_editor.screen_zoom, map_editor.screen_center, cub->tmp->resolution);
-	fov2 = remap_point(fov2, map_editor.screen_zoom, map_editor.screen_center, cub->tmp->resolution);
+	pos = remap_point(pos, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+	fov1 = remap_point(fov1, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
+	fov2 = remap_point(fov2, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
 
 	pos.px = (int)pos.px;
 	pos.py = (int)pos.py;
-	draw_circle(5, cub->tmp, color_point(last_pos, color(BLACK)));
-	draw_circle(5, cub->tmp, color_point(pos, col));
+	draw_circle(5, img, color_point(last_pos, color(BLACK)));
+	draw_circle(5, img, color_point(pos, col));
 
-	draw_line(last_pos, last_fov1, cub->tmp);
-	draw_line(last_pos, last_fov2, cub->tmp);
+	draw_line(last_pos, last_fov1, img);
+	draw_line(last_pos, last_fov2, img);
 
 	last_pos = pos;
 	last_fov1 = fov1;
@@ -982,8 +978,8 @@ int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col)
 	fov1.color = col;
 	fov2.color = col;
 
-	draw_line(pos, fov1, cub->tmp);
-	draw_line(pos, fov2, cub->tmp);
+	draw_line(pos, fov1, img);
+	draw_line(pos, fov2, img);
 }
 
 t_line	bbox_intersect_make_fov(t_point delta, t_point pos)
@@ -2005,7 +2001,7 @@ int	get_render_vertex_from_bsp(t_cub *cub, t_bsp *node, t_fov *fov, int *lock, f
 	return (1);
 }
 
-int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
+int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col, t_img *img)
 {
 	t_fov	fov;
 	int		lock;
@@ -2034,15 +2030,16 @@ int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
 		tmp1->vertex.b.py += cub->player->camera->pos.py;
 		*/
 		if (col.hex != color(BLACK).hex)
-			draw_line_remap(tmp1->vertex, map_editor, cub->tmp, tmp1->color);
+			draw_line_remap(tmp1->vertex, map_editor, img, tmp1->color);
 		else
-			draw_line_remap(tmp1->vertex, map_editor, cub->tmp, col);
+			draw_line_remap(tmp1->vertex, map_editor, img, col);
 		tmp = tmp->next;
 	}
 }
 
 int	proyect_point_to_screen(t_point pt, t_cub *cub)
 {
+	/*
 	t_line	proyection;
 	t_line	screen;
 	t_point	cross;
@@ -2060,6 +2057,7 @@ int	proyect_point_to_screen(t_point pt, t_cub *cub)
 	pt.px *= 100;
 	pt.py = 500;
 	draw_circle(10, cub->tmp, pt);
+	*/
 	
 	/*
 	proyection = line(cub->player->camera->pos, pt);
@@ -2109,13 +2107,17 @@ int	render_3d(t_cub *cub)
 int	game_mode(t_cub *cub)
 {
 	if (cub->game_mode != GAME)
-		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
-		//fill_img(cub->tmp, color_from_rgb(255, 0, 255));
+		fill_img(cub->editor_img->render, color_from_rgb(0, 0, 0));
 	cub->game_mode = GAME;
+
+	/*
+		//fill_img(cub->tmp, color_from_rgb(255, 0, 255));
 	mlx_mouse_hide(cub->mlx, cub->mlx_win);
 	mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
-	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 	render_3d(cub);
+	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
+	*/
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 }
 
 int editor_mode(t_cub *cub)
@@ -2123,26 +2125,29 @@ int editor_mode(t_cub *cub)
 	static t_map_editor	last = {0};
 
 	if (cub->game_mode != EDITOR)
-		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
+		fill_img(cub->editor_img->render, color_from_rgb(0, 0, 0));
+
 	cub->game_mode = EDITOR;
 	if (cub->mouse_press)
-		cub->map_editor.screen_center = mouse_pos_relative(cub);
-	mlx_mouse_show(cub->mlx, cub->mlx_win);
-	draw_grid(last, cub->tmp, color_from_rgb(0, 0, 0));
-	draw_grid(cub->map_editor, cub->tmp, color_from_rgb(100, 100, 100));
-	draw_segments(cub->segments, last, cub->tmp, color_from_rgb(0, 0, 0));
-	draw_segments(cub->segments, cub->map_editor, cub->tmp, color_from_rgb(50, 50, 50));
+		cub->map_editor.screen_center = mouse_pos_relative(cub, cub->main_window);
+
+	mlx_mouse_show(cub->mlx, cub->main_window->mlx_win);
+	draw_grid(last, cub->editor_img->render, color_from_rgb(0, 0, 0));
+	draw_grid(cub->map_editor, cub->editor_img->render, color_from_rgb(100, 100, 100));
+	draw_segments(cub->segments, last, cub->editor_img->render, color_from_rgb(0, 0, 0));
+	draw_segments(cub->segments, cub->map_editor, cub->editor_img->render, color_from_rgb(50, 50, 50));
 
 	//draw_bsp(cub, last, color(BLACK), 0);
 	//draw_bsp(cub, cub->map_editor, color(WHITE), 0);
 
-	draw_fov_intersection(cub, last, color(BLACK));
-	draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255));
+	draw_fov_intersection(cub, last, color(BLACK), cub->editor_img->render);
+	draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255), cub->editor_img->render);
 
-	draw_player(cub, last, color(BLACK));
-	draw_player(cub, cub->map_editor, color_from_rgb(255, 255, 0));
+	draw_player(cub, last, color(BLACK), cub->editor_img->render);
+	draw_player(cub, cub->map_editor, color_from_rgb(255, 255, 0), cub->editor_img->render);
 	last = cub->map_editor;
-	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
+
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 }
 
 #include <time.h>
@@ -2216,7 +2221,7 @@ int	mouse_press(int key, int x, int y, void *param)
 }
 int	mouse_release(int key, int x, int y, void *param)
 {
-	printf("key:%d, intx;%d, inty:%d\n", key, x, y);
+	printf("mouse:%d, intx;%d, inty:%d\n", key, x, y);
 	t_cub		*cub;
 
 	cub = (t_cub *)param;
@@ -2294,7 +2299,7 @@ int	key_press(int key, void *param)
 	t_cub		*cub;
 
 	cub = (t_cub *)param;
-	//printf("key:%d\n", key);
+	printf("super gofy key:%d\n", key);
 	if (key == 109)
 	{
 		if (cub->game_mode == GAME)
@@ -2369,6 +2374,97 @@ int	focus_out(void *param)
 	cub->focus = 0;
 }
 
+t_hooks	hooks(int (*option1)(), int (*option2)())
+{
+	t_hooks	result;
+
+	result.option1 = option1;
+	result.option2 = option2;
+	return (result);
+}
+
+t_win_hooks	win_hooks(t_hooks mouse, t_hooks key, t_hooks focus)
+{
+	t_win_hooks	result;
+
+	result.mouse = mouse;
+	result.key = key;
+	result.focus = focus;
+	return (result);
+}
+
+t_win	*new_window(void *mlx, t_resolution res, char *title)
+{
+	t_win				*result;
+	static unsigned int	id = 0;
+
+	result = malloc(sizeof(t_win));
+	if (!result)
+		return (NULL);
+	result->mlx_win = mlx_new_window(mlx, res.width, res.height, title);
+	if (!result->mlx_win)
+	{
+		free(result);
+		return (NULL);
+	}
+	result->res = res;
+	result->id = id++;
+	return (result);
+}
+
+void	start_hooks_in_window (t_win *win, t_win_hooks win_hooks, void *data)
+{
+	if (!win)
+		return ;
+	if (win_hooks.mouse.option1)
+		mlx_hook(win->mlx_win, 4, (1L<<2), win_hooks.mouse.option1, data);
+	if (win_hooks.mouse.option2)
+		mlx_hook(win->mlx_win, 5, (1L<<3), win_hooks.mouse.option2, data);
+	if (win_hooks.key.option1)
+		mlx_hook(win->mlx_win, 2, (1L<<0), win_hooks.mouse.option1, data);
+	/* // in development
+	if (win_hooks.key.option2)
+	*/
+	if (win_hooks.focus.option1)
+		mlx_hook(win->mlx_win, 9, (1L<<21), win_hooks.focus.option1, data);
+	if (win_hooks.focus.option2)
+		mlx_hook(win->mlx_win, 10, (1L<<21), win_hooks.focus.option2, data);
+}
+
+t_triple_buff_img	*new_triple_buff_img(void *mlx, t_resolution res)
+{
+	t_triple_buff_img	*result;
+
+	result = malloc(sizeof(t_triple_buff_img));
+	if (!result)
+		return (NULL);
+	result->render = init_img(mlx, res);
+	if (!result->render)
+	{
+		free(result);
+		return (NULL);
+	}
+	result->buffer_a = init_img(mlx, res);
+	if (!result->buffer_a)
+	{
+		free_img(result->render);
+		free(result);
+		return (NULL);
+	}
+	result->buffer_b = init_img(mlx, res);
+	if (!result->buffer_b)
+	{
+		free_img(result->render);
+		free_img(result->buffer_a);
+		free(result);
+		return (NULL);
+	}
+	fill_img(result->render, color(BLACK));
+	fill_img(result->buffer_a, color(BLACK));
+	fill_img(result->buffer_b, color(BLACK));
+	return (result);
+}
+
 int	main(int argc, char **argv)
 {
 	t_cub	*cub;
@@ -2380,11 +2476,35 @@ int	main(int argc, char **argv)
 	}
 
 
+	printf("proccess fine!!!2\n");
 	cub = ft_constructor(argv[1]);
-	//================================================================================
 
-	cub->tmp = init_img(cub->mlx, resolution(1920, 1080));
-	fill_img(cub->tmp, color(BLACK));
+	if (!cub)
+	{
+		write(2, "Error: cannot initialize the general struct\n", 45);
+		return (-1);
+	}
+
+
+	//================================================================================
+	cub->main_window = new_window(cub->mlx, resolution(1920, 1080), "main_window");
+
+	if (!cub->main_window)
+	{
+		printf("error pls fix this after\n");
+		exit(-1);
+	}
+	start_hooks_in_window(cub->main_window, win_hooks(
+	hooks(mouse_press, mouse_release),
+	hooks(key_press, NULL),
+	hooks(focus_in, focus_out)), cub);
+
+	cub->editor_img = new_triple_buff_img(cub->mlx, cub->main_window->res);
+	if (!cub->editor_img)
+	{
+		printf("error pls fix this after\n");
+		exit(-1);
+	}
 
 	// this part is parsing one map ======================================================
 	t_list	segments;
@@ -2417,7 +2537,7 @@ int	main(int argc, char **argv)
 
 	cub->segments = new_segments;
 	
-	cub->map_editor = new_map_editor();
+	cub->map_editor = map_editor();
 	cub->game_mode = PAUSE;
 	cub->player = new_player(NULL);
 	cub->player->camera->angle = 90;
@@ -2425,7 +2545,7 @@ int	main(int argc, char **argv)
 	calculate_deltas(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas);
 
 	// make screen limits
-	cub->fov1_screen.pz = (float)(((float)(cub->tmp->resolution.width + 2) / 4.0f)) / cub->fov1_deltas.px;
+	cub->fov1_screen.pz = (float)(((float)(cub->main_window->res.width + 2) / 4.0f)) / cub->fov1_deltas.px;
 	cub->fov2_screen.pz = cub->fov1_screen.pz;
 	cub->fov1_screen.px = cub->player->camera->pos.px + (cub->fov1_deltas.px * cub->fov1_screen.pz);
 	cub->fov1_screen.py = cub->player->camera->pos.py + (cub->fov1_deltas.py * cub->fov1_screen.pz);
@@ -2435,22 +2555,15 @@ int	main(int argc, char **argv)
 	cub->fov2_screen.color = color(WHITE);
 	// make screen limits
 
-	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 
-	if (!cub)
-	{
-		write(2, "Error: cannot initialize the general struct\n", 45);
-		return (-1);
-	}
+	// here goes the real angle and the real camera
+
 	cub->player->camera->pos.px = 2;
 	cub->player->camera->pos.py = 2;
-	mlx_hook(cub->mlx_win, 2, (1L<<0), key_press, cub);
-	mlx_hook(cub->mlx_win, 9, (1L<<21), focus_in, cub);
-	mlx_hook(cub->mlx_win, 10, (1L<<21), focus_out, cub);
-	mlx_hook(cub->mlx_win, 4, (1L<<2), mouse_press, cub);
-	mlx_hook(cub->mlx_win, 5, (1L<<3), mouse_release, cub);
-	mlx_mouse_move(cub->mlx, cub->mlx_win, 500, 500);
-	//mlx_hook(cub->mlx_win, 4, 0, (int (*)())mouse_press, cub);
+
+	// here goes the real angle and the real camera
+
 	mlx_loop_hook(cub->mlx, frame, cub);
 	mlx_loop(cub->mlx);
 }
