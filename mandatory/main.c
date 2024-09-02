@@ -6,7 +6,7 @@
 /*   By: samusanc <samusanc@student.42madrid.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/08/04 22:32:43 by samusanc          #+#    #+#             */
-/*   Updated: 2024/08/31 18:25:33 by samusanc         ###   ########.fr       */
+/*   Updated: 2024/09/02 18:10:32 by samusanc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -2294,40 +2294,41 @@ int	update_player_angle(t_player *player, t_point *deltas, t_point *fov1, t_poin
 	}
 }
 
+
 int	key_press(int key, void *param)
 {
 	t_cub		*cub;
 
 	cub = (t_cub *)param;
 	printf("super gofy key:%d\n", key);
-	if (key == 109)
+	if (key == XK_m)
 	{
 		if (cub->game_mode == GAME)
 			return (editor_mode(cub));
 		else
 			return (game_mode(cub));
 	}
-	if (key == 44)
+	if (key == XK_w)
 	{
 		cub->player->camera->pos.px += 1.0 * cub->p_deltas.px * cub->delta_time;
 		cub->player->camera->pos.py += 1.0 * cub->p_deltas.py * cub->delta_time;	
 	}
-	if (key == 111)
+	if (key == XK_s)
 	{
 		cub->player->camera->pos.px -= 1.0 * cub->p_deltas.px * cub->delta_time;
 		cub->player->camera->pos.py -= 1.0 * cub->p_deltas.py * cub->delta_time;	
 	}
-	if (key == 97)
+	if (key == XK_a)
 	{
 		cub->player->camera->pos.px += 1.0 * cub->p_deltas.py * cub->delta_time;
 		cub->player->camera->pos.py -= 1.0 * cub->p_deltas.px * cub->delta_time;	
 	}
-	if (key == 101)
+	if (key == XK_d)
 	{
 		cub->player->camera->pos.px -= 1.0 * cub->p_deltas.py * cub->delta_time;
 		cub->player->camera->pos.py += 1.0 * cub->p_deltas.px * cub->delta_time;	
 	}
-	if (key == 46)
+	if (key == XK_e)
 	{
 		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 
 		cub->player->camera->angle + 100.0 * cub->delta_time);
@@ -2339,7 +2340,7 @@ int	key_press(int key, void *param)
 		printf("screen width:%f\n", distance_between_points(cub->fov1_screen, cub->fov2_screen));
 
 	}
-	if (key == 39)
+	if (key == XK_q)
 	{
 		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 
 		cub->player->camera->angle - 100.0 * cub->delta_time);
@@ -2421,7 +2422,7 @@ void	start_hooks_in_window (t_win *win, t_win_hooks win_hooks, void *data)
 	if (win_hooks.mouse.option2)
 		mlx_hook(win->mlx_win, 5, (1L<<3), win_hooks.mouse.option2, data);
 	if (win_hooks.key.option1)
-		mlx_hook(win->mlx_win, 2, (1L<<0), win_hooks.mouse.option1, data);
+		mlx_hook(win->mlx_win, 2, (1L<<0), win_hooks.key.option1, data);
 	/* // in development
 	if (win_hooks.key.option2)
 	*/
