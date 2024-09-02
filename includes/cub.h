@@ -107,6 +107,7 @@ typedef struct s_cub
 	t_img				*south;
 	t_img				*east;
 	t_img				*west;
+	void			(*del)();
 }               t_cub;
 
 #endif

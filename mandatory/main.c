@@ -13,6 +13,253 @@
 #include "mlx.h"
 #include "cub.h"
 
+//==============================================
+
+typedef struct s_engine_obj t_engine_obj;
+
+
+//Plantilla gg
+/*
+
+void	del_plantilla_obj(t_plantilla *obj)
+{
+	if (obj)
+	{
+
+		ft_bzero(&obj, sizeof(t_plantilla));
+		free(obj);
+	}
+}
+
+t_plantilla	*new_plantilla_obj()
+{
+	t_plantilla	*result;
+
+	result = malloc(sizeof(t_plantilla));
+	if (!result)
+		return (NULL);
+	ft_bzero(&result, sizeof(t_plantilla));
+	result->del = del_plantilla_obj;
+
+	return (result);
+}
+
+*/
+
+
+typedef enum e_event_type
+{
+	mouse,
+	keyboard,
+	focus
+}			t_event_type;
+
+typedef struct s_event
+{
+	t_event_type	type;
+	int				id;
+	int				triggered;
+	int				ongoing;
+}				t_event;
+
+typedef	struct s_action
+{
+	t_event event;
+	void	(*triggered)();
+	void	(*ongoing)();
+	void	(*del)();
+}				t_action;
+
+void	del_action_obj(t_action *obj)
+{
+	if (obj)
+	{
+		ft_bzero(&obj, sizeof(t_action));
+		free(obj);
+	}
+}
+
+t_action	*new_action_obj(t_event event)
+{
+	t_action	*result;
+
+	result = malloc(sizeof(t_action));
+	if (!result)
+		return (NULL);
+	ft_bzero(&result, sizeof(t_action));
+	result->del = del_action_obj;
+	result->triggered = NULL;
+	result->ongoing = NULL;
+	return (result);
+}
+
+typedef struct s_input_mapping
+{
+	t_list			actions;
+	void			(*del)();
+}				t_input_mapping;
+
+void	del_input_mapping_obj(t_input_mapping *obj)
+{
+	if (obj)
+	{
+		list_clear(&obj->actions);
+		ft_bzero(&obj, sizeof(t_input_mapping));
+		free(obj);
+	}
+}
+
+t_input_mapping	*new_input_mapping_obj()
+{
+	t_input_mapping	*result;
+
+	result = malloc(sizeof(t_input_mapping));
+	if (!result)
+		return (NULL);
+	ft_bzero(&result, sizeof(t_input_mapping));
+	result->del = del_input_mapping_obj;
+	return (result);
+}
+
+typedef	struct s_engine_game_mode
+{
+	char			*name;
+	t_input_mapping	*input_context;
+	void			(*engine_game_mode)();
+	void			(*del)();
+}				t_engine_game_mode;
+
+void	*del_engine_game_mode(t_engine_game_mode *obj)
+{
+	if (obj)
+	{
+		free(obj->name);
+		obj->input_context->del(obj->input_context);
+		ft_bzero(&obj, sizeof(t_engine_game_mode));
+		free(obj);
+	}
+}
+
+t_engine_game_mode	*new_engine_game_mode(char *name)
+{
+	t_engine_game_mode	*result;
+	char		*name_tmp;
+
+	result = malloc(sizeof(t_engine_game_mode));
+	if (!result)
+		return (NULL);
+	ft_bzero(result, sizeof(t_engine_game_mode));
+	result->del = del_engine_game_mode;
+	name_tmp = ft_strdup(name);
+	if (!name)
+	{
+		result->del(result);
+		return (NULL);
+	}
+	return (result);
+}
+
+typedef struct s_engine
+{
+	t_cub				*cub;
+	unsigned int		frame;
+	double				delta_time;
+	t_engine_game_mode	*actual_game_mode;
+	t_list				game_modes;
+	t_list				obj;
+	void				(*del)();
+}				t_engine;
+
+void	del_engine_obj(t_engine *obj)
+{
+	if (obj)
+	{
+		obj->cub->del(obj->cub);
+		list_clear(&obj->game_modes);
+		list_clear(&obj->obj);
+
+		ft_bzero(&obj, sizeof(t_engine));
+		free(obj);
+	}
+}
+
+t_engine	*new_engine_obj()
+{
+	t_engine	*result;
+
+	result = malloc(sizeof(t_engine));
+	if (!result)
+		return (NULL);
+	ft_bzero(&result, sizeof(t_engine));
+	result->del = del_engine_obj;
+	return (result);
+}
+
+typedef struct t_transform
+{
+	char			*name;
+	void			*parent;
+	t_point			position;
+	t_point			rotation;
+	t_list			components;
+	t_engine_obj	*(*get_component)();
+}				t_transform;
+
+t_engine_obj	*get_component(t_engine_obj *parent, char *name)
+{
+	//srry implement latter or maybe never :p
+	return (NULL);
+}
+
+t_transform	transform()
+{
+	t_transform	result;
+
+	ft_bzero(&result, sizeof(t_transform));
+	result.get_component = get_component;
+	return (result);
+}
+
+typedef struct s_engine_obj
+{
+	void		*engine;
+	void		*parent;
+	t_transform	transform;
+	int			(*start)();
+	int			(*update)();
+	int			(*on_exit)();
+	int			(*del)();
+}				t_engine_obj;
+
+void			del_obj_engine_obj(t_engine_obj *obj)
+{
+	if (obj)
+		list_clear(&obj->transform.components);
+	free(obj);
+	return ;
+}
+
+t_engine_obj	*new_obj_engine_obj(void *engine)
+{
+	t_engine_obj	*result;
+
+	result = malloc(sizeof(t_engine_obj));
+	if (!result)
+		return (NULL);
+	ft_bzero(result, sizeof(t_engine_obj));
+
+	result->engine = engine;
+	result->transform = transform();
+	result->transform.parent = engine;
+	result->del = del_obj_engine_obj;
+	return (result);
+}
+
+t_node	*add_component(t_engine_obj *obj)
+{
+	return (node(obj, obj->del));
+}
+
 
 //===========================================================================//
 
@@ -2465,6 +2712,55 @@ t_triple_buff_img	*new_triple_buff_img(void *mlx, t_resolution res)
 	fill_img(result->buffer_b, color(BLACK));
 	return (result);
 }
+
+
+/*
+t_engine_obj	*new_pawn_obj(void *engine)
+{
+	t_engine_obj	*result;
+
+	result = new_actor_obj(engine);
+	if (!result)
+		return (NULL);
+	result->transform = transform();
+	result->transform.parent = engine;
+	if (!add_component(result, new_player_controller(engine)))
+	{
+		result->free_obj(result);
+		return (NULL);
+	}
+	return (result);
+}
+
+t_engine_obj	*new_player_controller(void *engine)
+{
+	t_engine_obj	*result;
+
+	result = new_pawn_obj(engine);
+	if (!result)
+		return (NULL);
+	result->transform = transform();
+	result->transform.parent = engine;
+	return (result);
+}
+
+t_engine_obj	*new_character_obj(void *engine)
+{
+	t_engine_obj	*result;
+
+	result = new_pawn_obj(engine);
+	if (!result)
+		return (NULL);
+	result->transform = transform();
+	result->transform.parent = engine;
+	if (!add_component(result, new_player_controller(engine)))
+	{
+		result->free_obj(result);
+		return (NULL);
+	}
+	return (result);
+}
+*/
 
 int	main(int argc, char **argv)
 {

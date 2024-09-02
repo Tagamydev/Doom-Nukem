@@ -1,62 +1,17 @@
-modules
+CHANGELOG
 
-Here i'm deleting all parsing part to merge after with afelicia
+updating the core engine, now cub struct is only a part of the engine struct.
 
+new modules
 
-/==================================================================/
-
-now, create the funtion to traverse the nodes
-get the player struct working
-get the fov working right
-get the screen working right
-
-/==================================================================/
-
-BSP
-
-WALLS
-
-LVL_DSG
-
-SECUNDARIO CUANDO ACABE!!!!!!
-
-MAP
-read map
-background grid
-render pipeline-> if not mouse event dont update, if only zoom update x, if is in game mode dont update, etc..;
-point hitboxes -> square;
-point drag and drop;
-point join automatically
-red area join warning?
-
-states?
-move, delete, add?
-save map
+engine 
+engine objs
+game_modes
 
 
-make lines more thick
-resolve the color lines problem
+and enable input actions, try to make a ft_enhanced_input from unreal engine
 
-
-test if the rsqrt is faster than the sqrt and if it is implement the sqrt
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+also start to implement triple buffer, still dont know if it will work
 
 
 
