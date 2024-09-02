@@ -799,17 +799,6 @@ int	pause_mode(t_cub *cub)
 	return (1);
 }
 
-int	game_mode(t_cub *cub)
-{
-	if (cub->game_mode != GAME)
-		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
-		//fill_img(cub->tmp, color_from_rgb(255, 0, 255));
-	cub->game_mode = GAME;
-	mlx_mouse_hide(cub->mlx, cub->mlx_win);
-	mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
-	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
-}
-
 int	draw_grid(t_map_editor editor, t_img *img, t_color color)
 {
 	t_point end;
@@ -2036,12 +2025,97 @@ int	draw_fov_intersection(t_cub *cub, t_map_editor map_editor, t_color col)
 	while (tmp)
 	{
 		tmp1 = tmp->content;
+		/*
+		tmp1->vertex.a = rotate_point(tmp1->vertex.a, 360.0 - cub->player->camera->angle);
+		tmp1->vertex.a.px += cub->player->camera->pos.px;
+		tmp1->vertex.a.py += cub->player->camera->pos.py;
+		tmp1->vertex.b = rotate_point(tmp1->vertex.b, 360.0 - cub->player->camera->angle);
+		tmp1->vertex.b.px += cub->player->camera->pos.px;
+		tmp1->vertex.b.py += cub->player->camera->pos.py;
+		*/
 		if (col.hex != color(BLACK).hex)
 			draw_line_remap(tmp1->vertex, map_editor, cub->tmp, tmp1->color);
 		else
 			draw_line_remap(tmp1->vertex, map_editor, cub->tmp, col);
 		tmp = tmp->next;
 	}
+}
+
+int	proyect_point_to_screen(t_point pt, t_cub *cub)
+{
+	t_line	proyection;
+	t_line	screen;
+	t_point	cross;
+	t_point	cross1;
+	t_line	screen1;
+	int		error;
+	float	tmp;
+
+	error = 0;
+	pt.px += cub->player->camera->pos.px;
+	pt.py += cub->player->camera->pos.py;
+	pt = rotate_point(pt, -cub->player->camera->angle);
+	screen = line(point(-((float)(cub->tmp->resolution.width + 10) / 2.0), 0), 
+	point((float)(cub->tmp->resolution.width + 10) / 2.0, 0));
+	pt.px *= 100;
+	pt.py = 500;
+	draw_circle(10, cub->tmp, pt);
+	
+	/*
+	proyection = line(cub->player->camera->pos, pt);
+	screen = line(cub->fov1_screen, cub->fov2_screen);
+	cross = get_intersection_between_lines(proyection, screen, &error);
+	cross.color = pt.color;
+	if (!error)
+	{
+		cross = rotate_point(cross, -cub->player->camera->angle);
+		cross.py += cub->player->camera->pos.py;
+		cross.py = cub->tmp->resolution.height / 2;
+		draw_circle(10, cub->tmp, cross);
+	}
+	*/
+}
+
+int	render_3d(t_cub *cub)
+{
+	t_fov	fov;
+	int		lock;
+	float	max_dist;
+	t_list	render_list;
+
+	// get render list
+	lock = 0;
+	fov = make_fov(cub->player->camera->fov, cub->player->camera->angle);
+	max_dist = FLT_MAX;
+	render_list = list(NULL);
+	if (cub->root_node)
+		get_render_vertex_from_bsp(cub, cub->root_node, &fov, &lock, &max_dist, &render_list);
+	// get render list
+
+	t_node	*tmp;
+	t_render_vertex	*tmp1;
+
+	tmp = render_list.head;
+	while (tmp)
+	{
+		tmp1 = tmp->content;
+		proyect_point_to_screen(color_point(tmp1->vertex.a, tmp1->color), cub);
+		proyect_point_to_screen(color_point(tmp1->vertex.b, tmp1->color), cub);
+		tmp = tmp->next;
+	}
+}
+
+
+int	game_mode(t_cub *cub)
+{
+	if (cub->game_mode != GAME)
+		fill_img(cub->tmp, color_from_rgb(0, 0, 0));
+		//fill_img(cub->tmp, color_from_rgb(255, 0, 255));
+	cub->game_mode = GAME;
+	mlx_mouse_hide(cub->mlx, cub->mlx_win);
+	mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
+	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
+	render_3d(cub);
 }
 
 int editor_mode(t_cub *cub)
@@ -2249,11 +2323,30 @@ int	key_press(int key, void *param)
 		cub->player->camera->pos.py += 1.0 * cub->p_deltas.px * cub->delta_time;	
 	}
 	if (key == 46)
+	{
 		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 
 		cub->player->camera->angle + 100.0 * cub->delta_time);
+		cub->fov1_screen.px = cub->player->camera->pos.px * cub->fov1_deltas.px * cub->fov1_screen.pz;
+		cub->fov1_screen.py = cub->player->camera->pos.py * cub->fov1_deltas.py * cub->fov1_screen.pz;
+
+		cub->fov2_screen.px = cub->player->camera->pos.px * cub->fov2_deltas.px * cub->fov2_screen.pz;
+		cub->fov2_screen.py = cub->player->camera->pos.py * cub->fov2_deltas.py * cub->fov2_screen.pz;
+		printf("screen width:%f\n", distance_between_points(cub->fov1_screen, cub->fov2_screen));
+
+	}
 	if (key == 39)
+	{
 		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 
 		cub->player->camera->angle - 100.0 * cub->delta_time);
+
+		cub->fov1_screen.px = cub->player->camera->pos.px * cub->fov1_deltas.px * cub->fov1_screen.pz;
+		cub->fov1_screen.py = cub->player->camera->pos.py * cub->fov1_deltas.py * cub->fov1_screen.pz;
+
+		cub->fov2_screen.px = cub->player->camera->pos.px * cub->fov2_deltas.px * cub->fov2_screen.pz;
+		cub->fov2_screen.py = cub->player->camera->pos.py * cub->fov2_deltas.py * cub->fov2_screen.pz;
+		printf("screen width:%f\n", distance_between_points(cub->fov1_screen, cub->fov2_screen));
+
+	}
 	if (cub->game_mode == GAME)
 		key_press_game(key, cub);
 	if (cub->game_mode == EDITOR)
@@ -2327,8 +2420,20 @@ int	main(int argc, char **argv)
 	cub->map_editor = new_map_editor();
 	cub->game_mode = PAUSE;
 	cub->player = new_player(NULL);
-	cub->player->camera->angle = 45;
+	cub->player->camera->angle = 90;
+
 	calculate_deltas(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas);
+
+	// make screen limits
+	cub->fov1_screen.pz = (float)(((float)(cub->tmp->resolution.width + 2) / 4.0f)) / cub->fov1_deltas.px;
+	cub->fov2_screen.pz = cub->fov1_screen.pz;
+	cub->fov1_screen.px = cub->player->camera->pos.px + (cub->fov1_deltas.px * cub->fov1_screen.pz);
+	cub->fov1_screen.py = cub->player->camera->pos.py + (cub->fov1_deltas.py * cub->fov1_screen.pz);
+	cub->fov2_screen.px = cub->player->camera->pos.px + (cub->fov2_deltas.px * cub->fov2_screen.pz);
+	cub->fov2_screen.py = cub->player->camera->pos.py + (cub->fov2_deltas.py * cub->fov2_screen.pz);
+	cub->fov1_screen.color = color(WHITE);
+	cub->fov2_screen.color = color(WHITE);
+	// make screen limits
 
 	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
 

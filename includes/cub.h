@@ -65,6 +65,8 @@ typedef struct s_cub
 	t_point			p_deltas;
 	t_point			fov1_deltas;
 	t_point			fov2_deltas;
+	t_point			fov1_screen;
+	t_point			fov2_screen;
 
 
 	t_bsp			*root_node;
