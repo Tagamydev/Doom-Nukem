@@ -1,6 +1,7 @@
 CHANGELOG
 
-updating the double buffer render, optimized with funtion screenshoot
+updating the clean pixels funtion to work with avx, i need to change this part to go with bonus and sse lscpu
+
 
 
 

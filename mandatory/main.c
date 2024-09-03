@@ -2380,26 +2380,74 @@ int	game_mode(t_cub *cub)
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 }
 
-int	screenshot_pixels(int *dest, int *src, t_resolution res)
+//#include <emmintrin.h>
+#include <immintrin.h>
+
+int clean_pixels(long long *dest, t_resolution res)
 {
-	int	i;
+    size_t i;
+    size_t size;
+    size_t simd_size;
+    size_t remaining;
+    __m256i *simd_dest;
+    __m256i zero;
+
+    zero = _mm256_setzero_si256();
+    size = (res.width * res.height) / 2;
+    simd_size = size / 4;
+    remaining = size % 4;
+    simd_dest = (__m256i *)dest;
 
 	i = 0;
-	while (i < (res.width * res.height))
+	while (i < simd_size)
 	{
+        _mm256_storeu_si256(&simd_dest[i], zero);
+		i++;
+	}
+	i = 0;
+	while (i < remaining)
+	{
+        dest[simd_size * 4 + i] = 0;
+		i++;
+	}
+    return 0;
+}
+
+int	screenshot_pixels(long long *dest, const long long *src, t_resolution res)
+{
+	size_t			i;
+	size_t			size;
+	size_t			simd_size;
+	size_t			remaining;
+	__m256i			*simd_dest;
+	const __m256i	*simd_src = (const __m256i *)src;
+
+	i = 0;
+	size = (res.width * res.height) / 2;
+	remaining = size % 4;
+	simd_size = size / 4;
+	simd_dest = (__m256i *)dest;
+	while (i < size)
+	{
+		/*
 		if (dest[i] != src[i])
 			dest[i] = src[i];
+			*/
+		_mm256_storeu_si256(&simd_dest[i], _mm256_load_si256(&simd_src[i]));
+		i++;
+	}
+	i = 0;
+	while (i < remaining)
+	{
+		dest[size - remaining + i] = src[size - remaining + i];
 		i++;
 	}
 }
 
 int editor_mode(t_cub *cub)
 {
-	static t_map_editor	last = {0};
-
 	if (cub->game_mode != EDITOR)
 	{
-
 		mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 		fill_img(cub->editor_img->render, color_from_rgb(0, 0, 0));
 	}
@@ -2410,34 +2458,13 @@ int editor_mode(t_cub *cub)
 
 
 	mlx_mouse_show(cub->mlx, cub->main_window->mlx_win);
-	//draw_grid(last, cub->editor_img->render, color_from_rgb(0, 0, 0));
+	clean_pixels(cub->editor_img->render->data_addr, cub->editor_img->render->resolution);
 
 	draw_grid(cub->map_editor, cub->editor_img->render, color_from_rgb(100, 100, 100));
-
-	//draw_segments(cub->segments, last, cub->editor_img->render, color_from_rgb(0, 0, 0));
-
 	draw_segments(cub->segments, cub->map_editor, cub->editor_img->render, color_from_rgb(50, 50, 50));
-
-
-	//draw_bsp(cub, last, color(BLACK), 0);
-	//draw_bsp(cub, cub->map_editor, color(WHITE), 0);
-
-	//draw_fov_intersection(cub, last, color(BLACK), cub->editor_img->render);
 	draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255), cub->editor_img->render);
-
-	//draw_player(cub, last, color(BLACK), cub->editor_img->render);
 	draw_player(cub, cub->map_editor, color_from_rgb(255, 255, 0), cub->editor_img->render);
-	last = cub->map_editor;
-
-	screenshot_pixels(cub->editor_img->buffer_a->data_addr, cub->editor_img->render->data_addr, cub->editor_img->render->resolution);
-
-	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->buffer_a->img, 0, 0);
-
-	draw_grid(cub->map_editor, cub->editor_img->render, color(BLACK));
-	draw_segments(cub->segments, cub->map_editor, cub->editor_img->render, color(BLACK));
-	draw_fov_intersection(cub, cub->map_editor, color(BLACK), cub->editor_img->render);
-	draw_player(cub, cub->map_editor, color(BLACK), cub->editor_img->render);
-
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 }
 
 #include <time.h>

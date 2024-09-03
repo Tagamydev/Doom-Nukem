@@ -38,6 +38,7 @@ SUBMODLIB	+= ./mlx_utils/libmlx_utils.a
 
 # GCC WITH LIBS AND INCLUDES
 CFLAGS		= -Wextra -fsanitize=address
+CFLAGS		+= -mavx
 CC			= gcc $(CFLAGS) $(INC)
 
 #================================= SCRS =================================#
