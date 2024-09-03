@@ -1,17 +1,7 @@
 CHANGELOG
 
-updating the core engine, now cub struct is only a part of the engine struct.
+updating the double buffer render, optimized with funtion screenshoot
 
-new modules
-
-engine 
-engine objs
-game_modes
-
-
-and enable input actions, try to make a ft_enhanced_input from unreal engine
-
-also start to implement triple buffer, still dont know if it will work
 
 
 

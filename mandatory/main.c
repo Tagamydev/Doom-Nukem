@@ -26,7 +26,7 @@ void	del_plantilla_obj(t_plantilla *obj)
 	if (obj)
 	{
 
-		ft_bzero(&obj, sizeof(t_plantilla));
+		ft_bzero(obj, sizeof(t_plantilla));
 		free(obj);
 	}
 }
@@ -38,7 +38,7 @@ t_plantilla	*new_plantilla_obj()
 	result = malloc(sizeof(t_plantilla));
 	if (!result)
 		return (NULL);
-	ft_bzero(&result, sizeof(t_plantilla));
+	ft_bzero(result, sizeof(t_plantilla));
 	result->del = del_plantilla_obj;
 
 	return (result);
@@ -74,7 +74,7 @@ void	del_action_obj(t_action *obj)
 {
 	if (obj)
 	{
-		ft_bzero(&obj, sizeof(t_action));
+		ft_bzero(obj, sizeof(t_action));
 		free(obj);
 	}
 }
@@ -86,7 +86,7 @@ t_action	*new_action_obj(t_event event)
 	result = malloc(sizeof(t_action));
 	if (!result)
 		return (NULL);
-	ft_bzero(&result, sizeof(t_action));
+	ft_bzero(result, sizeof(t_action));
 	result->del = del_action_obj;
 	result->triggered = NULL;
 	result->ongoing = NULL;
@@ -104,7 +104,7 @@ void	del_input_mapping_obj(t_input_mapping *obj)
 	if (obj)
 	{
 		list_clear(&obj->actions);
-		ft_bzero(&obj, sizeof(t_input_mapping));
+		ft_bzero(obj, sizeof(t_input_mapping));
 		free(obj);
 	}
 }
@@ -116,7 +116,7 @@ t_input_mapping	*new_input_mapping_obj()
 	result = malloc(sizeof(t_input_mapping));
 	if (!result)
 		return (NULL);
-	ft_bzero(&result, sizeof(t_input_mapping));
+	ft_bzero(result, sizeof(t_input_mapping));
 	result->del = del_input_mapping_obj;
 	return (result);
 }
@@ -135,7 +135,7 @@ void	*del_engine_game_mode(t_engine_game_mode *obj)
 	{
 		free(obj->name);
 		obj->input_context->del(obj->input_context);
-		ft_bzero(&obj, sizeof(t_engine_game_mode));
+		ft_bzero(obj, sizeof(t_engine_game_mode));
 		free(obj);
 	}
 }
@@ -178,7 +178,7 @@ void	del_engine_obj(t_engine *obj)
 		list_clear(&obj->game_modes);
 		list_clear(&obj->obj);
 
-		ft_bzero(&obj, sizeof(t_engine));
+		ft_bzero(obj, sizeof(t_engine));
 		free(obj);
 	}
 }
@@ -190,7 +190,7 @@ t_engine	*new_engine_obj()
 	result = malloc(sizeof(t_engine));
 	if (!result)
 		return (NULL);
-	ft_bzero(&result, sizeof(t_engine));
+	ft_bzero(result, sizeof(t_engine));
 	result->del = del_engine_obj;
 	return (result);
 }
@@ -228,7 +228,7 @@ typedef struct s_engine_obj
 	int			(*start)();
 	int			(*update)();
 	int			(*on_exit)();
-	int			(*del)();
+	void			(*del)();
 }				t_engine_obj;
 
 void			del_obj_engine_obj(t_engine_obj *obj)
@@ -375,9 +375,21 @@ typedef	struct s_segment
 {
 	t_line	segment;
 	t_point	vector;
+
+	void	(*del)();
 }				t_segment;
 
-t_segment	*segment(t_line line)
+int	del_segment_obj(t_segment *obj)
+{
+	if (obj)
+	{
+
+		ft_bzero(obj, sizeof(t_segment));
+		free(obj);
+	}
+}
+
+t_segment	*new_segment_obj(t_line line)
 {
 	t_segment	*result;
 	t_point		a;
@@ -387,6 +399,7 @@ t_segment	*segment(t_line line)
 	if (!result)
 		return (NULL);
 	ft_bzero(result, sizeof(t_segment));
+	result->del = del_segment_obj;
 	result->segment = line;
 	a = line.a;
 	b = line.b;
@@ -716,7 +729,7 @@ float	cross_2d(t_point a, t_point b)
 void	ss_add_segment(t_segment splitter, t_list *new_segments, t_bsp *nd)
 {
 	t_segment	*content_tmp;
-	content_tmp = segment(splitter.segment);
+	content_tmp = new_segment_obj(splitter.segment);
 	if (content_tmp)
 	{
 		nd->id = new_segments->size;
@@ -783,8 +796,8 @@ int	split_segments(t_list *front, t_list *back, t_list segments, t_bsp *nd, t_li
 				intersection_pt = point(seg_tmp->segment.a.px + intersection * seg_tmp->vector.px, 
 				seg_tmp->segment.a.py + intersection * seg_tmp->vector.py);
 
-				r_segment = segment(line(seg_tmp->segment.a, intersection_pt));
-				l_segment = segment(line(intersection_pt, seg_tmp->segment.b));
+				r_segment = new_segment_obj(line(seg_tmp->segment.a, intersection_pt));
+				l_segment = new_segment_obj(line(intersection_pt, seg_tmp->segment.b));
 				if (numerator > 0)
 				{
 					third_segment = l_segment;
@@ -1771,7 +1784,7 @@ void	cut_segment(t_cub *cub, t_segment *seg, t_point fov1, t_point fov2, int cas
 	t_line	tmp;
 	int		error;
 
-	if (!segment || !case_num)
+	if (!seg || !case_num)
 		return ;
 	if (case_num == 1)
 	{
@@ -1871,16 +1884,16 @@ int	is_in_front_of_player(t_cub *cub, t_segment *seg, int *cut, t_fov *fov)
 	fov2.px += fov->fov2_delta.px * 100.0f;
 	fov2.py += fov->fov2_delta.py * 100.0f;
 
-	tmp1 = segment(line(screen_min, screen_max));
+	tmp1 = new_segment_obj(line(screen_min, screen_max));
 	if (!tmp1)
 		return (0);
-	tmp2 = segment(line(pos, fov1));
+	tmp2 = new_segment_obj(line(pos, fov1));
 	if (!tmp2)
 	{
 		free(tmp1);
 		return (0);
 	}
-	tmp3 = segment(line(fov2, pos));
+	tmp3 = new_segment_obj(line(fov2, pos));
 	if (!tmp3)
 	{
 		free(tmp1);
@@ -2200,7 +2213,7 @@ int	get_render_vertex_from_bsp(t_cub *cub, t_bsp *node, t_fov *fov, int *lock, f
 			cut = 0;
 			if (node->splitter)
 			{
-				tmp = segment(node->splitter->segment);
+				tmp = new_segment_obj(node->splitter->segment);
 				if (is_in_front_of_player(cub, tmp, &cut, fov))
 				{
 					if (cut == 3 || *lock)
@@ -2367,38 +2380,77 @@ int	game_mode(t_cub *cub)
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 }
 
+int	screenshot_pixels(int *dest, int *src, t_resolution res)
+{
+	int	i;
+
+	i = 0;
+	while (i < (res.width * res.height))
+	{
+		if (dest[i] != src[i])
+			dest[i] = src[i];
+		i++;
+	}
+}
+
 int editor_mode(t_cub *cub)
 {
 	static t_map_editor	last = {0};
 
 	if (cub->game_mode != EDITOR)
+	{
+
+		mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 		fill_img(cub->editor_img->render, color_from_rgb(0, 0, 0));
+	}
 
 	cub->game_mode = EDITOR;
 	if (cub->mouse_press)
 		cub->map_editor.screen_center = mouse_pos_relative(cub, cub->main_window);
 
+
 	mlx_mouse_show(cub->mlx, cub->main_window->mlx_win);
-	draw_grid(last, cub->editor_img->render, color_from_rgb(0, 0, 0));
+	//draw_grid(last, cub->editor_img->render, color_from_rgb(0, 0, 0));
+
 	draw_grid(cub->map_editor, cub->editor_img->render, color_from_rgb(100, 100, 100));
-	draw_segments(cub->segments, last, cub->editor_img->render, color_from_rgb(0, 0, 0));
+
+	//draw_segments(cub->segments, last, cub->editor_img->render, color_from_rgb(0, 0, 0));
+
 	draw_segments(cub->segments, cub->map_editor, cub->editor_img->render, color_from_rgb(50, 50, 50));
+
 
 	//draw_bsp(cub, last, color(BLACK), 0);
 	//draw_bsp(cub, cub->map_editor, color(WHITE), 0);
 
-	draw_fov_intersection(cub, last, color(BLACK), cub->editor_img->render);
+	//draw_fov_intersection(cub, last, color(BLACK), cub->editor_img->render);
 	draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255), cub->editor_img->render);
 
-	draw_player(cub, last, color(BLACK), cub->editor_img->render);
+	//draw_player(cub, last, color(BLACK), cub->editor_img->render);
 	draw_player(cub, cub->map_editor, color_from_rgb(255, 255, 0), cub->editor_img->render);
 	last = cub->map_editor;
 
-	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
+	screenshot_pixels(cub->editor_img->buffer_a->data_addr, cub->editor_img->render->data_addr, cub->editor_img->render->resolution);
+
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->buffer_a->img, 0, 0);
+
+	draw_grid(cub->map_editor, cub->editor_img->render, color(BLACK));
+	draw_segments(cub->segments, cub->map_editor, cub->editor_img->render, color(BLACK));
+	draw_fov_intersection(cub, cub->map_editor, color(BLACK), cub->editor_img->render);
+	draw_player(cub, cub->map_editor, color(BLACK), cub->editor_img->render);
+
 }
 
 #include <time.h>
 
+void	change_buffers(t_triple_buff_img *img)
+{
+	t_img	*tmp;
+
+	tmp = img->render;
+	img->render = img->buffer_a;
+	img->buffer_a = img->buffer_b;
+	img->buffer_b = tmp;
+}
 
 int	frame(void *p_cub)
 {
@@ -2406,6 +2458,7 @@ int	frame(void *p_cub)
 	double	now;
 	static	double last_f;
 	static	int	last;
+	int		second;
 
 
 	cub = (t_cub *)p_cub;
@@ -2413,8 +2466,12 @@ int	frame(void *p_cub)
 	now = (double)(clock() * 5) / CLOCKS_PER_SEC;
 	cub->delta_time = now - last_f;
 	last_f = now;
+
+
+	second = 0;
 	if ((int)now > last)
 	{
+		second = 1;
 		printf("fps:%d\n", cub->frame);
 		printf("player pos:%f,%f, angle:%f\n", 
 		cub->player->camera->pos.px, cub->player->camera->pos.py, cub->player->camera->angle);
@@ -2429,12 +2486,18 @@ int	frame(void *p_cub)
 	//printf("delta_time:%f\n", cub->delta_time);
 	//cub->delta_time = 0.01;
 
-	if (!cub->focus)
-		pause_mode(cub);
-	if (cub->game_mode == GAME)
-		game_mode(cub);
-	else if (cub->game_mode == EDITOR)
-		editor_mode(cub);
+	//if (second)
+	{
+
+	//	change_buffers(cub->editor_img);
+
+		if (!cub->focus)
+			pause_mode(cub);
+		if (cub->game_mode == GAME)
+			game_mode(cub);
+		else if (cub->game_mode == EDITOR)
+			editor_mode(cub);
+	}
 
 	//block mouse in play mode
 	//printf("frame:%d\n", cub->frame);
@@ -2807,20 +2870,20 @@ int	main(int argc, char **argv)
 	t_list	segments;
 
 	segments = list(NULL);
-	list_push_b(&segments, node(segment(line(point(5, 6), point(2, 3))), &default_node_free));//hard
-	list_push_b(&segments, node(segment(line(point(0, 0), point(7, 1))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(7, 1), point(7, 8))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(7, 8), point(1, 8))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(1, 8), point(0, 0))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(5, 6), point(2, 3))), &default_node_free));//hard
+	list_push_b(&segments, node(new_segment_obj(line(point(0, 0), point(7, 1))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(7, 1), point(7, 8))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(7, 8), point(1, 8))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(1, 8), point(0, 0))), &default_node_free));
 
-	list_push_b(&segments, node(segment(line(point(-10, -10), point(17, 1))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(17, 1), point(17, 18))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(17, 18), point(1, 18))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(1, 18), point(-10, -10))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(-10, -10), point(17, 1))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(17, 1), point(17, 18))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(17, 18), point(1, 18))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(1, 18), point(-10, -10))), &default_node_free));
 
-	list_push_b(&segments, node(segment(line(point(3, 6), point(5, 6))), &default_node_free));//easy
-	list_push_b(&segments, node(segment(line(point(2, 4), point(3, 6))), &default_node_free));
-	list_push_b(&segments, node(segment(line(point(2, 3), point(2, 4))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(3, 6), point(5, 6))), &default_node_free));//easy
+	list_push_b(&segments, node(new_segment_obj(line(point(2, 4), point(3, 6))), &default_node_free));
+	list_push_b(&segments, node(new_segment_obj(line(point(2, 3), point(2, 4))), &default_node_free));
 
 	t_map_editor map_edit;
 
