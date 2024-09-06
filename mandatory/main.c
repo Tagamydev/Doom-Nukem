@@ -2383,7 +2383,7 @@ int	game_mode(t_cub *cub)
 //#include <emmintrin.h>
 #include <immintrin.h>
 
-int clean_pixels(long long *dest, t_resolution res)
+int fast_clean_pixels(long long *dest, t_resolution res)
 {
     size_t i;
     size_t size;
@@ -2413,6 +2413,22 @@ int clean_pixels(long long *dest, t_resolution res)
     return 0;
 }
 
+int	slow_clean_pixels(long long *dest, t_resolution res)
+{
+	size_t	i;
+	size_t	size;
+
+	size = (res.height * res.width) / 2;
+	i = 0;
+	while (i < size)
+	{
+		if (dest[i])
+			dest[i] = 0;
+		i++;
+	}
+	return (1);
+}
+
 int	screenshot_pixels(long long *dest, const long long *src, t_resolution res)
 {
 	size_t			i;
@@ -2429,10 +2445,6 @@ int	screenshot_pixels(long long *dest, const long long *src, t_resolution res)
 	simd_dest = (__m256i *)dest;
 	while (i < size)
 	{
-		/*
-		if (dest[i] != src[i])
-			dest[i] = src[i];
-			*/
 		_mm256_storeu_si256(&simd_dest[i], _mm256_load_si256(&simd_src[i]));
 		i++;
 	}
@@ -2442,6 +2454,14 @@ int	screenshot_pixels(long long *dest, const long long *src, t_resolution res)
 		dest[size - remaining + i] = src[size - remaining + i];
 		i++;
 	}
+}
+
+int	clean_pixels(t_img *img)
+{
+	if (BONUS)
+		fast_clean_pixels(img->data_addr, img->resolution);
+	else
+		slow_clean_pixels(img->data_addr, img->resolution);
 }
 
 int editor_mode(t_cub *cub)
@@ -2456,9 +2476,10 @@ int editor_mode(t_cub *cub)
 	if (cub->mouse_press)
 		cub->map_editor.screen_center = mouse_pos_relative(cub, cub->main_window);
 
+	clean_pixels(cub->editor_img->render);
+
 
 	mlx_mouse_show(cub->mlx, cub->main_window->mlx_win);
-	clean_pixels(cub->editor_img->render->data_addr, cub->editor_img->render->resolution);
 
 	draw_grid(cub->map_editor, cub->editor_img->render, color_from_rgb(100, 100, 100));
 	draw_segments(cub->segments, cub->map_editor, cub->editor_img->render, color_from_rgb(50, 50, 50));
@@ -2479,22 +2500,16 @@ void	change_buffers(t_triple_buff_img *img)
 	img->buffer_b = tmp;
 }
 
-int	frame(void *p_cub)
+int	acurated_delta_time(t_cub *cub)
 {
-	t_cub	*cub;
 	double	now;
-	static	double last_f;
-	static	int	last;
 	int		second;
+	static	double last_f;
+	static	int last;
 
-
-	cub = (t_cub *)p_cub;
-	cub->frame += 1;
 	now = (double)(clock() * 5) / CLOCKS_PER_SEC;
 	cub->delta_time = now - last_f;
 	last_f = now;
-
-
 	second = 0;
 	if ((int)now > last)
 	{
@@ -2506,17 +2521,25 @@ int	frame(void *p_cub)
 		cub->frame = 0;
 		last = now;
 	}
+	return (second);
+}
+
+int	frame(void *p_cub)
+{
+	t_cub			*cub;
+
+
+	cub = (t_cub *)p_cub;
+	cub->frame += 1;
+	if (!BONUS)
+		acurated_delta_time(cub);
+	else
+		cub->delta_time = 0.016f;
+
 	if (cub->delta_time < 0.016f)
 		cub->delta_time = 0.016f;
 	if (cub->delta_time > 0.1f)
 		cub->delta_time = 0.1f;
-	//printf("delta_time:%f\n", cub->delta_time);
-	//cub->delta_time = 0.01;
-
-	//if (second)
-	{
-
-	//	change_buffers(cub->editor_img);
 
 		if (!cub->focus)
 			pause_mode(cub);
@@ -2524,10 +2547,6 @@ int	frame(void *p_cub)
 			game_mode(cub);
 		else if (cub->game_mode == EDITOR)
 			editor_mode(cub);
-	}
-
-	//block mouse in play mode
-	//printf("frame:%d\n", cub->frame);
 	return (0);
 }
 
