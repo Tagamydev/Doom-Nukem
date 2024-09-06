@@ -2458,6 +2458,8 @@ int	screenshot_pixels(long long *dest, const long long *src, t_resolution res)
 
 int	clean_pixels(t_img *img)
 {
+
+	// change this!!!!!!!!
 	if (BONUS)
 		fast_clean_pixels(img->data_addr, img->resolution);
 	else
@@ -2531,6 +2533,7 @@ int	frame(void *p_cub)
 
 	cub = (t_cub *)p_cub;
 	cub->frame += 1;
+	// change this!!!!!!!!
 	if (!BONUS)
 		acurated_delta_time(cub);
 	else
