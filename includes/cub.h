@@ -80,7 +80,9 @@ typedef struct s_cub
 	int					mouse_press;
 	t_point				last_mouse_grab;
 
-	t_triple_buff_img	*editor_img;
+	t_img				*editor_img;
+	t_img				*game_img;
+	t_img				*minimap_img;
 
 
 

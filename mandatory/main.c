@@ -1043,17 +1043,17 @@ int	pause_mode(t_cub *cub)
 	static	int		sign = 1;
 
 	if (cub->game_mode != PAUSE)
-		fill_img(cub->editor_img->render, color_from_rgb(0, 0, 0));
-		//fill_img(cub->editor_img->render, color_from_rgb(255, 0, 0));
+		fill_img(cub->editor_img, color_from_rgb(0, 0, 0));
+		//fill_img(cub->editor_img, color_from_rgb(255, 0, 0));
 	cub->game_mode = change_game_mode(PAUSE);
 
-	draw_circle(50, cub->editor_img->render, color_point(point(x, 200), color_from_rgb(255, 0, 0)));
+	draw_circle(50, cub->editor_img, color_point(point(x, 200), color_from_rgb(255, 0, 0)));
 	x += (float)100 * (float)sign * cub->delta_time;
 
 	mlx_mouse_show(cub->mlx, cub->main_window->mlx_win);
 
-	draw_circle(50, cub->editor_img->render, color_point(point(x, 200), color_from_rgb(255, 255, 255)));
-	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
+	draw_circle(50, cub->editor_img, color_point(point(x, 200), color_from_rgb(255, 255, 255)));
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->img, 0, 0);
 	return (1);
 }
 
@@ -2366,21 +2366,6 @@ int	render_3d(t_cub *cub)
 }
 
 
-int	game_mode(t_cub *cub)
-{
-	if (cub->game_mode != GAME)
-		fill_img(cub->editor_img->render, color_from_rgb(0, 0, 0));
-	cub->game_mode = GAME;
-
-	/*
-		//fill_img(cub->tmp, color_from_rgb(255, 0, 255));
-	mlx_mouse_hide(cub->mlx, cub->mlx_win);
-	mlx_mouse_move(cub->mlx, cub->mlx_win, cub->tmp->resolution.width / 2, cub->tmp->resolution.height / 2);
-	render_3d(cub);
-	mlx_put_image_to_window(cub->mlx, cub->mlx_win, cub->tmp->img, 0, 0);
-	*/
-	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
-}
 
 //#include <emmintrin.h>
 #include <immintrin.h>
@@ -2468,7 +2453,31 @@ int	clean_pixels(t_img *img)
 		slow_clean_pixels(img->data_addr, img->resolution);
 }
 
-int	draw_square(size_t length, t_img *img, t_point start, size_t grossor)
+int	game_mode(t_cub *cub)
+{
+	t_map_editor	minimap;
+
+	if (cub->game_mode != GAME)
+		fill_img(cub->game_img, color_from_rgb(0, 0, 0));
+	cub->game_mode = GAME;
+	minimap = map_editor();
+	minimap.screen_zoom = 10;
+	minimap.screen_center = point(cub->player->camera->pos.px * minimap.screen_zoom,
+	cub->player->camera->pos.py * minimap.screen_zoom);//cub->player->camera->pos;
+	
+
+	clean_pixels(cub->game_img);
+	clean_pixels(cub->minimap_img);
+
+	draw_grid(minimap, cub->minimap_img, color_from_rgb(100, 100, 100));
+	draw_map_walls(cub, minimap, cub->minimap_img);
+	draw_player(cub, minimap, color_from_rgb(255, 255, 0), cub->minimap_img);
+
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->game_img->img, 0, 0);
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->minimap_img->img, 0, 0);
+}
+
+int	draw_square(size_t length, t_img *img, t_point start)
 {
 	size_t	i;
 	size_t	j;
@@ -2484,8 +2493,7 @@ int	draw_square(size_t length, t_img *img, t_point start, size_t grossor)
 		start.px = start_x;
 		while (j < length)
 		{
-			if (((i > 0 && i < grossor) || (i < length && i > length - grossor)) || ((j > 0 && j < grossor) || (j < length && j > length - grossor)))
-				put_pixel(img, start);
+			put_pixel(img, start);
 			j++;
 			start.px++;
 		}
@@ -2498,11 +2506,28 @@ int	draw_square(size_t length, t_img *img, t_point start, size_t grossor)
 int	draw_map_walls(t_cub *cub, t_map_editor editor, t_img *img)
 {
 	t_point	tmp;
+	size_t	x;
+	size_t	y;
 
-	tmp = remap_point(point(0, 0), editor.screen_zoom, editor.screen_center, img->resolution);
-	tmp.color = color(WHITE);
-	put_pixel(img, tmp);
-	draw_square(editor.screen_zoom + 1, img, tmp, (size_t)(editor.screen_zoom / 2));
+	y = 0;
+	while (cub->map[y])
+	{
+		x = 0;
+		while (cub->map[y][x])
+		{
+			if (cub->map[y][x] == '1')
+			{
+				tmp = remap_point(point(x, y), 
+				editor.screen_zoom, editor.screen_center, 
+				img->resolution);
+				tmp.color = color(WHITE);
+				put_pixel(img, tmp);
+				draw_square(editor.screen_zoom + 1, img, tmp);
+			}
+			x++;
+		}
+		y++;
+	}
 	return (1);
 }
 
@@ -2510,26 +2535,26 @@ int editor_mode(t_cub *cub)
 {
 	if (cub->game_mode != EDITOR)
 	{
-		mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
-		fill_img(cub->editor_img->render, color_from_rgb(0, 0, 0));
+		mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->img, 0, 0);
+		fill_img(cub->editor_img, color_from_rgb(0, 0, 0));
 	}
 
 	cub->game_mode = EDITOR;
 	if (cub->mouse_press)
 		cub->map_editor.screen_center = mouse_pos_relative(cub, cub->main_window);
 
-	clean_pixels(cub->editor_img->render);
+	clean_pixels(cub->editor_img);
 
 
 	mlx_mouse_show(cub->mlx, cub->main_window->mlx_win);
 
-	draw_grid(cub->map_editor, cub->editor_img->render, color_from_rgb(100, 100, 100));
+	draw_grid(cub->map_editor, cub->editor_img, color_from_rgb(100, 100, 100));
 
-	//draw_segments(cub->segments, cub->map_editor, cub->editor_img->render, color_from_rgb(50, 50, 50));
-	//draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255), cub->editor_img->render);
-	draw_map_walls(cub, cub->map_editor, cub->editor_img->render);
-	draw_player(cub, cub->map_editor, color_from_rgb(255, 255, 0), cub->editor_img->render);
-	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
+	//draw_segments(cub->segments, cub->map_editor, cub->editor_img, color_from_rgb(50, 50, 50));
+	//draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255), cub->editor_img);
+	draw_map_walls(cub, cub->map_editor, cub->editor_img);
+	draw_player(cub, cub->map_editor, color_from_rgb(255, 255, 0), cub->editor_img);
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->img, 0, 0);
 }
 
 #include <time.h>
@@ -2950,12 +2975,24 @@ int	main(int argc, char **argv)
 	hooks(key_press, NULL),
 	hooks(focus_in, focus_out)), cub);
 
-	cub->editor_img = new_triple_buff_img(cub->mlx, cub->main_window->res);
+	cub->editor_img = init_img(cub->mlx, cub->main_window->res);
 	if (!cub->editor_img)
 	{
 		printf("error pls fix this after\n");
 		exit(-1);
 	}
+
+
+	cub->game_img = init_img(cub->mlx, cub->main_window->res);
+	if (!cub->game_img)
+	{
+		printf("error pls fix\n");
+		exit(-1);
+
+	}
+
+	cub->minimap_img = init_img(cub->mlx, resolution(
+		cub->main_window->res.height / 5, cub->main_window->res.height / 5));
 
 	// this part is parsing one map ======================================================
 	t_list	segments;
@@ -3035,12 +3072,12 @@ int	main(int argc, char **argv)
 	cub->fov2_screen.color = color(WHITE);
 	// make screen limits
 
-	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->img, 0, 0);
 
 	// here goes the real angle and the real camera
 
-	cub->player->camera->pos.px = 2;
-	cub->player->camera->pos.py = 2;
+	cub->player->camera->pos.px = 10;
+	cub->player->camera->pos.py = 10;
 
 	// here goes the real angle and the real camera
 
