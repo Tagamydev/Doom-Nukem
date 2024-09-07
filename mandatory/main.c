@@ -631,6 +631,8 @@ t_point	remap_point(t_point pt, int zoom, t_point center, t_resolution res)
 	pt.py *= zoom;
 	pt.px += half.width - center.px;
 	pt.py += half.height - center.py;
+	pt.px = (int)pt.px;
+	pt.py = (int)pt.py;
 	return(pt);
 }
 
@@ -2460,10 +2462,48 @@ int	clean_pixels(t_img *img)
 {
 
 	// change this!!!!!!!!
-	if (BONUS)
+	if (!BONUS)
 		fast_clean_pixels(img->data_addr, img->resolution);
 	else
 		slow_clean_pixels(img->data_addr, img->resolution);
+}
+
+int	draw_square(size_t length, t_img *img, t_point start, size_t grossor)
+{
+	size_t	i;
+	size_t	j;
+	size_t	start_x;
+	size_t	start_y;
+
+	i = 0;
+	j = 0;
+	start_x = (size_t)start.px;
+	while (i < length)
+	{
+		j = 0;
+		start.px = start_x;
+		while (j < length)
+		{
+			if (((i > 0 && i < grossor) || (i < length && i > length - grossor)) || ((j > 0 && j < grossor) || (j < length && j > length - grossor)))
+				put_pixel(img, start);
+			j++;
+			start.px++;
+		}
+		i++;
+		start.py++;
+	}
+	return (1);
+}
+
+int	draw_map_walls(t_cub *cub, t_map_editor editor, t_img *img)
+{
+	t_point	tmp;
+
+	tmp = remap_point(point(0, 0), editor.screen_zoom, editor.screen_center, img->resolution);
+	tmp.color = color(WHITE);
+	put_pixel(img, tmp);
+	draw_square(editor.screen_zoom + 1, img, tmp, (size_t)(editor.screen_zoom / 2));
+	return (1);
 }
 
 int editor_mode(t_cub *cub)
@@ -2484,8 +2524,10 @@ int editor_mode(t_cub *cub)
 	mlx_mouse_show(cub->mlx, cub->main_window->mlx_win);
 
 	draw_grid(cub->map_editor, cub->editor_img->render, color_from_rgb(100, 100, 100));
-	draw_segments(cub->segments, cub->map_editor, cub->editor_img->render, color_from_rgb(50, 50, 50));
-	draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255), cub->editor_img->render);
+
+	//draw_segments(cub->segments, cub->map_editor, cub->editor_img->render, color_from_rgb(50, 50, 50));
+	//draw_fov_intersection(cub, cub->map_editor, color_from_rgb(255, 0, 255), cub->editor_img->render);
+	draw_map_walls(cub, cub->map_editor, cub->editor_img->render);
 	draw_player(cub, cub->map_editor, color_from_rgb(255, 255, 0), cub->editor_img->render);
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->render->img, 0, 0);
 }
@@ -2933,6 +2975,35 @@ int	main(int argc, char **argv)
 	list_push_b(&segments, node(new_segment_obj(line(point(3, 6), point(5, 6))), &default_node_free));//easy
 	list_push_b(&segments, node(new_segment_obj(line(point(2, 4), point(3, 6))), &default_node_free));
 	list_push_b(&segments, node(new_segment_obj(line(point(2, 3), point(2, 4))), &default_node_free));
+	
+   char **map;
+
+	map = malloc(sizeof(char *) * 8);
+	ft_bzero(map, sizeof(char *) * 8);
+    // Fill the map with '1's on the borders and '0's inside
+    for (int i = 0; i < 7; i++) {
+		map[i] = malloc(sizeof(char) * 8);
+		ft_bzero(map[i], sizeof(char) * 8);
+        for (int j = 0; j < 7; j++) {
+            if (i == 0 || i == 6 || j == 0 || j == 6) {
+                map[i][j] = '1'; // Borders
+            } else {
+                map[i][j] = '0'; // Inside
+            }
+        }
+    }
+
+    // Place the player 'P' in the middle (3,3)
+    //map[3][3] = 'P';
+
+    // Print the map
+    for (int i = 0; i < 7; i++) {
+        for (int j = 0; j < 7; j++) {
+            printf("%c ", map[i][j]);
+        }
+        printf("\n");
+    }
+	cub->map = map;
 
 	t_map_editor map_edit;
 
