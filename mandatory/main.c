@@ -2453,6 +2453,90 @@ int	clean_pixels(t_img *img)
 		slow_clean_pixels(img->data_addr, img->resolution);
 }
 
+typedef	struct s_cub_ray
+{
+	int		hit;
+	t_list	hits;
+	int		(*del)();
+}				t_cub_ray;
+
+void	del_cub_ray_obj(t_cub_ray *obj)
+{
+	if (obj)
+	{
+		list_clear(&obj->hits);
+		ft_bzero(obj, sizeof(t_cub_ray));
+		free(obj);
+	}
+}
+
+t_cub_ray	*new_cub_ray_obj()
+{
+	t_cub_ray	*result;
+
+	result = malloc(sizeof(t_cub_ray));
+	if (!result)
+		return (NULL);
+	ft_bzero(result, sizeof(t_cub_ray));
+	result->del = del_cub_ray_obj;
+	return (result);
+}
+
+
+t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor minimap)
+{
+	t_point		player;
+	t_point		ray;
+	float		hypo;
+	float		screen_dist;
+
+	player = cub->player->camera->pos;
+	ray = player;
+	ray.px += cos(deg2_rad(angle)) * distance;
+	ray.py += sin(deg2_rad(angle)) * distance;
+	hypo = distance_between_points(player, ray);
+	screen_dist = sin(deg2_rad(cub->player->camera->angle - angle)) * hypo;
+	screen_dist = sqrt((hypo * hypo) - (screen_dist * screen_dist));
+	ray = player;
+	ray.px += cos(deg2_rad(angle)) * screen_dist;
+	ray.py += sin(deg2_rad(angle)) * screen_dist;
+	player = remap_point(player, minimap.screen_zoom, minimap.screen_center, cub->minimap_img->resolution);
+	ray = remap_point(ray, minimap.screen_zoom, minimap.screen_center, cub->minimap_img->resolution);
+	player.color = color(GREEN);
+	ray.color = color(GREEN);
+	//draw_line(player, ray, cub->minimap_img);
+	return (NULL);
+}
+
+void	draw_walls_from_ray(t_cub_ray *ray)
+{
+	if (!ray)
+		return ;
+
+	ray->del(ray);
+}
+
+int	ray_casting(t_cub *cub, t_map_editor minimap)
+{
+	size_t	number_of_rays;
+	size_t	iterator;
+	float	start_angle;
+	float	multiplier;
+
+	number_of_rays = cub->main_window->res.width;
+	multiplier = (float)cub->player->camera->fov / (float)number_of_rays;
+	start_angle = cub->player->camera->angle;
+	start_angle = start_angle - (cub->player->camera->fov / 2.0f);
+	iterator = 0;
+	while (iterator < number_of_rays)
+	{
+
+		draw_walls_from_ray(cub_cast_ray(cub, start_angle, 10.0f, minimap));
+		iterator++;
+		start_angle += multiplier;
+	}
+}
+
 int	game_mode(t_cub *cub)
 {
 	t_map_editor	minimap;
@@ -2472,6 +2556,8 @@ int	game_mode(t_cub *cub)
 	draw_grid(minimap, cub->minimap_img, color_from_rgb(100, 100, 100));
 	draw_map_walls(cub, minimap, cub->minimap_img);
 	draw_player(cub, minimap, color_from_rgb(255, 255, 0), cub->minimap_img);
+
+	ray_casting(cub, minimap);
 
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->game_img->img, 0, 0);
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->minimap_img->img, 0, 0);
@@ -3076,8 +3162,8 @@ int	main(int argc, char **argv)
 
 	// here goes the real angle and the real camera
 
-	cub->player->camera->pos.px = 10;
-	cub->player->camera->pos.py = 10;
+	cub->player->camera->pos.px = 2;
+	cub->player->camera->pos.py = 2;
 
 	// here goes the real angle and the real camera
 
