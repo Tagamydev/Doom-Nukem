@@ -2503,7 +2503,7 @@ int	dda_check_map(t_cub *cub, t_point pt)
 		map_size_y++;
 	while (cub->map[0][map_size_x])
 		map_size_x++;
-	if ((map_size_x < x) || (map_size_y < y))
+	if ((map_size_x < x) || (map_size_y < y) || (x < 0) || (y < 0))
 		return (-1);
 	if (cub->map[y][x] == '1')
 		return (1);
@@ -2517,24 +2517,26 @@ t_point	dda_calculate_y_down(t_cub *cub, float delta_x, float delta_y)
 	int		map_check;
 
 	player = cub->player->camera->pos;
-	result.py = (float)((int)player.py - 1);
+	result.py = (float)((int)player.py);
+	result.py -= 0.1f;
 	result.px = player.px + delta_x * (get_dist_delt_y(delta_y, result.py, player.py));
 
 	map_check = dda_check_map(cub, result);
-	if(map_check == 1 || map_check == -1)
+	if(map_check == 1)
 	{
-		printf("wall hit!!!");
+		result = remap_point(result, cub->map_editor.screen_zoom, cub->map_editor.screen_center, cub->editor_img->resolution);
+		player = remap_point(player, cub->map_editor.screen_zoom, cub->map_editor.screen_center, cub->editor_img->resolution);
+		player.color = color(GREEN);
+		result.color = color(GREEN);
+		draw_line(player, result, cub->editor_img);
 		return (result);
 	}
-
-
-
-	//result.px = player.px + delta_x * 10.0f;
-	//result.py = player.py + delta_y * 10.0f;
 	result = remap_point(result, cub->map_editor.screen_zoom, cub->map_editor.screen_center, cub->editor_img->resolution);
 	player = remap_point(player, cub->map_editor.screen_zoom, cub->map_editor.screen_center, cub->editor_img->resolution);
-	player.color = color(GREEN);
-	result.color = color(GREEN);
+	player.color = color(RED);
+	result.color = color(RED);
+	//result.px = player.px + delta_x * 10.0f;
+	//result.py = player.py + delta_y * 10.0f;
 	draw_line(player, result, cub->editor_img);
 	return (result);
 }
