@@ -2488,14 +2488,41 @@ float	get_dist_delt_y(float delta_y, float y, float start_y)
 	return ((y - start_y) / (delta_y));
 }
 
+int	dda_check_map(t_cub *cub, t_point pt)
+{
+	int	x;
+	int	map_size_x;
+	int	y;
+	int	map_size_y;
+
+	x = (int)pt.px;
+	y = (int)pt.py;
+	map_size_x = 0;
+	map_size_y = 0;
+	while (cub->map[map_size_y])
+		map_size_y++;
+	while (cub->map[0][map_size_x])
+		map_size_x++;
+	if ((map_size_x < x) || (map_size_y < y))
+		return (-1);
+	if (cub->map[y][x] == '1')
+		return (1);
+	return (0);
+}
+
 t_point	dda_calculate_y_down(t_cub *cub, float delta_x, float delta_y)
 {
 	t_point	result;
 	t_point	player;
+	int		map_check;
 
 	player = cub->player->camera->pos;
 	result.py = (float)((int)player.py - 1);
 	result.px = player.px + delta_x * (get_dist_delt_y(delta_y, result.py, player.py));
+
+	map_check = dda_check_map(cub, result);
+	if(map_check == 1 || map_check == -1)
+		return (result);
 
 
 
