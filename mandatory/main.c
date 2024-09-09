@@ -2522,8 +2522,10 @@ t_point	dda_calculate_y_down(t_cub *cub, float delta_x, float delta_y)
 
 	map_check = dda_check_map(cub, result);
 	if(map_check == 1 || map_check == -1)
+	{
+		printf("wall hit!!!");
 		return (result);
-
+	}
 
 
 
