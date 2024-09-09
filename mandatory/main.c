@@ -2483,7 +2483,7 @@ t_cub_ray	*new_cub_ray_obj()
 	return (result);
 }
 
-float	get_dist_delt_y(float delta_y, float y, float start_y)
+float	get_dist_delt(float delta_y, float y, float start_y)
 {
 	return ((y - start_y) / (delta_y));
 }
@@ -2510,34 +2510,113 @@ int	dda_check_map(t_cub *cub, t_point pt)
 	return (0);
 }
 
+t_point	dda_calculate_y_up(t_cub *cub, float delta_x, float delta_y)
+{
+	t_point	result;
+	t_point	player;
+	int		map_check;
+	float	dist;
+
+	player = cub->player->camera->pos;
+	result.py = (float)((int)player.py + 1.0f);
+	result.py += 0.1f;
+	result.px = player.px + delta_x * (get_dist_delt(delta_y, result.py, player.py));
+
+	map_check = dda_check_map(cub, result);
+	if (map_check == 1)
+		return (result);
+	if (map_check == -1)
+		return (result);
+	dist = get_dist_delt(delta_y, result.py + 1.0f, result.py);
+	while (!map_check)
+	{
+		result.py += delta_y * dist;
+		result.px += delta_x * dist;
+		map_check = dda_check_map(cub, result);
+	}
+	return (result);
+}
+
+
 t_point	dda_calculate_y_down(t_cub *cub, float delta_x, float delta_y)
 {
 	t_point	result;
 	t_point	player;
 	int		map_check;
+	float	dist;
 
 	player = cub->player->camera->pos;
 	result.py = (float)((int)player.py);
 	result.py -= 0.1f;
-	result.px = player.px + delta_x * (get_dist_delt_y(delta_y, result.py, player.py));
+	result.px = player.px + delta_x * (get_dist_delt(delta_y, result.py, player.py));
 
 	map_check = dda_check_map(cub, result);
-	if(map_check == 1)
-	{
-		result = remap_point(result, cub->map_editor.screen_zoom, cub->map_editor.screen_center, cub->editor_img->resolution);
-		player = remap_point(player, cub->map_editor.screen_zoom, cub->map_editor.screen_center, cub->editor_img->resolution);
-		player.color = color(GREEN);
-		result.color = color(GREEN);
-		draw_line(player, result, cub->editor_img);
+	if (map_check == 1)
 		return (result);
+	if (map_check == -1)
+		return (result);
+	dist = get_dist_delt(delta_y, result.py - 1.0f, result.py);
+	while (!map_check)
+	{
+		result.py += delta_y * dist;
+		result.px += delta_x * dist;
+		map_check = dda_check_map(cub, result);
 	}
-	result = remap_point(result, cub->map_editor.screen_zoom, cub->map_editor.screen_center, cub->editor_img->resolution);
-	player = remap_point(player, cub->map_editor.screen_zoom, cub->map_editor.screen_center, cub->editor_img->resolution);
-	player.color = color(RED);
-	result.color = color(RED);
-	//result.px = player.px + delta_x * 10.0f;
-	//result.py = player.py + delta_y * 10.0f;
-	draw_line(player, result, cub->editor_img);
+	return (result);
+}
+
+t_point	dda_calculate_x_right(t_cub *cub, float delta_x, float delta_y)
+{
+	t_point	result;
+	t_point	player;
+	int		map_check;
+	float	dist;
+
+	player = cub->player->camera->pos;
+	result.px = (float)((int)player.px + 1);
+	result.px += 0.1f;
+	result.py = player.py + delta_y * (get_dist_delt(delta_x, result.px, player.px));
+
+	map_check = dda_check_map(cub, result);
+	if (map_check == 1)
+		return (result);
+	if (map_check == -1)
+		return (result);
+	dist = get_dist_delt(delta_x, result.px + 1.0f, result.px);
+
+	while (!map_check)
+	{
+		result.py += delta_y * dist;
+		result.px += delta_x * dist;
+		map_check = dda_check_map(cub, result);
+	}
+	return (result);
+}
+
+t_point	dda_calculate_x_left(t_cub *cub, float delta_x, float delta_y)
+{
+	t_point	result;
+	t_point	player;
+	int		map_check;
+	float	dist;
+
+	player = cub->player->camera->pos;
+	result.px = (float)((int)player.px);
+	result.py = player.py + delta_y * (get_dist_delt(delta_x, result.px, player.px));
+
+	map_check = dda_check_map(cub, result);
+	if (map_check == 1)
+		return (result);
+	if (map_check == -1)
+		return (result);
+	dist = get_dist_delt(delta_x, result.px - 1.0f, result.px);
+
+	while (!map_check)
+	{
+		result.py += delta_y * dist;
+		result.px += delta_x * dist;
+		map_check = dda_check_map(cub, result);
+	}
 	return (result);
 }
 
@@ -2600,31 +2679,24 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	}
 	else if (angle > 270.0f && angle < 360.0f)
 	{
-	//	tmp_ray1 = dda_calculate_x_right(cub, delta_x, delta_y);
+		tmp_ray1 = dda_calculate_x_right(cub, delta_x, delta_y);
 		tmp_ray2 = dda_calculate_y_down(cub, delta_x, delta_y);
-	//	ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
-		ray = tmp_ray2;
-
+		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
 		return (NULL);	
 	}
 	else if (angle > 90.0f && angle < 180.0f)
 	{
-
-
-		/*
 		tmp_ray1 = dda_calculate_x_left(cub, delta_x, delta_y);
 		tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
 		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
-		*/
 		return (NULL);	
 
 	}
 	else if (angle > 180.0f && angle < 270.0f)
 	{
-	//	tmp_ray1 = dda_calculate_x_left(cub, delta_x, delta_y);
+		tmp_ray1 = dda_calculate_x_left(cub, delta_x, delta_y);
 		tmp_ray2 = dda_calculate_y_down(cub, delta_x, delta_y);
-		//ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
-		ray = tmp_ray2;
+		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
 		return (NULL);	
 	}
 	else if (angle == 0.0f && angle == 180.0f)
