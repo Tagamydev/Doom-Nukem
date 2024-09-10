@@ -2772,16 +2772,39 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	return (result);
 }
 
-void	draw_walls_from_ray(t_cub *cub, t_cub_ray *ray)
+void draw_wall(int wall_height, t_cub *cub, size_t wall_n)
+{
+    int wall_top = (int)(cub->main_window->res.height - (float)wall_height) / 2;
+    int wall_bottom = wall_top + wall_height;
+
+    // Ensure we don't go out of screen bounds
+    if (wall_top < 0)
+		wall_top = 0;
+    if (wall_bottom >= cub->main_window->res.height) 
+		wall_bottom = (int)(cub->main_window->res.height - 1.0f);
+
+    for (int y = wall_top; y < wall_bottom; y++) {
+		put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(GREEN)));
+    }
+}
+
+void	draw_walls_from_ray(size_t ray_n, t_cub *cub, t_cub_ray *ray)
 {
 	t_point	tmp;
+	int		wall_height;
+	float	right_dist;
 
 	if (!ray)
 		return ;
 	tmp = cub->player->camera->pos;
+	right_dist = ray->dist;
+	wall_height = (int)(cub->main_window->res.height / right_dist);
+	draw_wall(wall_height, cub, ray_n);
+	/*
 	tmp.px += ray->deltx * ray->dist;
 	tmp.py += ray->delty * ray->dist;
 	draw_line_remap(line(tmp, cub->player->camera->pos), cub->map_editor, cub->editor_img, color(GREEN));
+	*/
 	ray->del(ray);
 }
 
@@ -2799,7 +2822,7 @@ int	ray_casting(t_cub *cub, t_map_editor minimap)
 	iterator = 0;
 	while (iterator < number_of_rays)
 	{
-		draw_walls_from_ray(cub, cub_cast_ray(cub, fix_angle(start_angle), 10.0f, minimap));
+		draw_walls_from_ray(iterator, cub, cub_cast_ray(cub, fix_angle(start_angle), 10.0f, minimap));
 		iterator++;
 		start_angle += multiplier;
 	}
