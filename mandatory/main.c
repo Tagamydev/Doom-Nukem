@@ -2459,6 +2459,8 @@ typedef	struct s_cub_ray
 	int		x;
 	int		y;
 	float	dist;
+	float	deltx;
+	float	delty;
 	int		(*del)();
 }				t_cub_ray;
 
@@ -2491,26 +2493,32 @@ float	get_dist_delt(float delta_y, float y, float start_y)
 int	dda_check_map(t_cub *cub, t_point pt)
 {
 	int	x;
-	int	map_size_x;
 	int	y;
-	int	map_size_y;
+	int	i;
+	int	j;
 
+	x = 0;
+	y = 0;
+	i = 0;
+	j = 0;
 	x = (int)pt.px;
 	y = (int)pt.py;
-	map_size_x = 0;
-	map_size_y = 0;
-	while (cub->map[map_size_y])
-		map_size_y++;
-	while (cub->map[0][map_size_x])
-		map_size_x++;
-	if ((map_size_x < x) || (map_size_y < y) || (x < 0) || (y < 0))
+	if (x < 0 || y < 0)
+		return (-1);
+	while (cub->map[i])
+		i++;
+	i--;
+	while (cub->map[0][j])
+		j++;
+	j--;
+	if (y > j || x > i)
 		return (-1);
 	if (cub->map[y][x] == '1')
 		return (1);
 	return (0);
 }
 
-t_point	dda_calculate_y_up(t_cub *cub, float delta_x, float delta_y)
+t_point	dda_calculate_y_down(t_cub *cub, float delta_x, float delta_y)
 {
 	t_point	result;
 	t_point	player;
@@ -2519,7 +2527,7 @@ t_point	dda_calculate_y_up(t_cub *cub, float delta_x, float delta_y)
 
 	player = cub->player->camera->pos;
 	result.py = (float)((int)player.py + 1.0f);
-	result.py += 0.1f;
+	result.py += 0.01f;
 	result.px = player.px + delta_x * (get_dist_delt(delta_y, result.py, player.py));
 
 	map_check = dda_check_map(cub, result);
@@ -2538,7 +2546,7 @@ t_point	dda_calculate_y_up(t_cub *cub, float delta_x, float delta_y)
 }
 
 
-t_point	dda_calculate_y_down(t_cub *cub, float delta_x, float delta_y)
+t_point	dda_calculate_y_up(t_cub *cub, float delta_x, float delta_y)
 {
 	t_point	result;
 	t_point	player;
@@ -2547,7 +2555,7 @@ t_point	dda_calculate_y_down(t_cub *cub, float delta_x, float delta_y)
 
 	player = cub->player->camera->pos;
 	result.py = (float)((int)player.py);
-	result.py -= 0.1f;
+	result.py -= 0.01f;
 	result.px = player.px + delta_x * (get_dist_delt(delta_y, result.py, player.py));
 
 	map_check = dda_check_map(cub, result);
@@ -2574,7 +2582,7 @@ t_point	dda_calculate_x_right(t_cub *cub, float delta_x, float delta_y)
 
 	player = cub->player->camera->pos;
 	result.px = (float)((int)player.px + 1);
-	result.px += 0.1f;
+	result.px += 0.01f;
 	result.py = player.py + delta_y * (get_dist_delt(delta_x, result.px, player.px));
 
 	map_check = dda_check_map(cub, result);
@@ -2601,7 +2609,8 @@ t_point	dda_calculate_x_left(t_cub *cub, float delta_x, float delta_y)
 	float	dist;
 
 	player = cub->player->camera->pos;
-	result.px = (float)((int)player.px);
+	result.px = (float)((int)player.px + 1);
+	result.px -= 0.01f;
 	result.py = player.py + delta_y * (get_dist_delt(delta_x, result.px, player.px));
 
 	map_check = dda_check_map(cub, result);
@@ -2646,6 +2655,39 @@ t_point	compare_dists(t_point start, t_point *dist1, t_point *dist2, t_point *di
 	return (*dist3);
 }
 
+int	check_limits_dda_util(int angle)
+{
+	if (angle == 0)
+		return (1);
+	if (angle == 90)
+		return (2);
+	if (angle == 180)
+		return (3);
+	if (angle == 270)
+		return (4);
+	return (0);
+}
+
+int	check_limits_dda(float angle)
+{
+	int	angle_m;
+	int	angle_sum;
+	int	angle_sub;
+	int	result;
+
+	angle_m = (int)angle;
+	angle_sum = (int)angle + 1;
+	angle_sub = (int)angle - 1;
+	result = check_limits_dda_util(angle_m);
+	if (result)
+		return (result);
+	result = check_limits_dda_util(angle_sum);
+	if (result)
+		return (result);
+	result = check_limits_dda_util(angle_sub);
+	return (result);
+}
+
 t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor minimap)
 {
 	t_cub_ray	*result;
@@ -2658,7 +2700,7 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	float		delta_x;
 	float		delta_y;
 
-	result = NULL;//new_cub_ray_obj();
+	result = new_cub_ray_obj();
 //	if (!result)
 //		return (NULL);
 	player = cub->player->camera->pos;
@@ -2672,76 +2714,61 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
 	ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
 	*/
-	if (angle < 90.0f && angle > 0.0f)
+	if (check_limits_dda(angle))
 	{
 
-		return (NULL);	
+		result->del(result);
+		return (NULL);
 	}
-	else if (angle > 270.0f && angle < 360.0f)
+	else if ((int)angle < 90 && (int)angle > 0)
 	{
 		tmp_ray1 = dda_calculate_x_right(cub, delta_x, delta_y);
 		tmp_ray2 = dda_calculate_y_down(cub, delta_x, delta_y);
 		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
-		return (NULL);	
+	}
+	else if ((int)angle > 270 && (int)angle < 360)
+	{
+		tmp_ray1 = dda_calculate_x_right(cub, delta_x, delta_y);
+		tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
+		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
 	}
 	else if (angle > 90.0f && angle < 180.0f)
 	{
 		tmp_ray1 = dda_calculate_x_left(cub, delta_x, delta_y);
-		tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
-		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
-		return (NULL);	
-
-	}
-	else if (angle > 180.0f && angle < 270.0f)
-	{
-		tmp_ray1 = dda_calculate_x_left(cub, delta_x, delta_y);
 		tmp_ray2 = dda_calculate_y_down(cub, delta_x, delta_y);
 		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
-		return (NULL);	
 	}
-	else if (angle == 0.0f && angle == 180.0f)
+	else
 	{
-		/*
-		if (angle == 180)
-			tmp_ray1 = dda_calculate_x_left(cub, delta_x, delta_y);
-		else
-			tmp_ray1 = dda_calculate_x_right(cub, delta_x, delta_y);
-		ray = compare_dists(player, &tmp_ray1, &ray, NULL);
-		*/
-		return (NULL);	
-
+		result->del(result);
+		return (NULL);
 	}
-	else if (angle == 90.0f && angle == 270.0f)
-	{
-		/*
-		if (angle == 90)
-			tmp_ray1 = dda_calculate_y_up(cub, delta_x, delta_y);
-		else
-			tmp_ray1 = dda_calculate_y_down(cub, delta_x, delta_y);
-		ray = compare_dists(player, &tmp_ray1, &ray, NULL);
-		*/
-		return (NULL);	
-
-	}
-
+/*
 	hypo = distance_between_points(player, ray);
 	screen_dist = sin(deg2_rad(cub->player->camera->angle - angle)) * hypo;
 	screen_dist = sqrt((hypo * hypo) - (screen_dist * screen_dist));
-	/*
+	*/
+	screen_dist = distance_between_points(player, ray);
 	result->x = (int)ray.px;
 	result->y = (int)ray.py;
 	result->dist = screen_dist;
+	result->deltx = delta_x;
+	result->delty = delta_y;
 	if (result->dist < distance)
 		result->hit = 1;
-		*/
 	return (result);
 }
 
-void	draw_walls_from_ray(t_cub_ray *ray)
+void	draw_walls_from_ray(t_cub *cub, t_cub_ray *ray)
 {
+	t_point	tmp;
+
 	if (!ray)
 		return ;
-
+	tmp = cub->player->camera->pos;
+	tmp.px += ray->deltx * ray->dist;
+	tmp.py += ray->delty * ray->dist;
+	draw_line_remap(line(tmp, cub->player->camera->pos), cub->map_editor, cub->editor_img, color(GREEN));
 	ray->del(ray);
 }
 
@@ -2759,8 +2786,7 @@ int	ray_casting(t_cub *cub, t_map_editor minimap)
 	iterator = 0;
 	while (iterator < number_of_rays)
 	{
-
-		draw_walls_from_ray(cub_cast_ray(cub, start_angle, 10.0f, minimap));
+		draw_walls_from_ray(cub, cub_cast_ray(cub, fix_angle(start_angle), 10.0f, minimap));
 		iterator++;
 		start_angle += multiplier;
 	}
