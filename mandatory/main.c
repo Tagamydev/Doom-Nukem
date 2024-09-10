@@ -2706,6 +2706,7 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	float		screen_dist;
 	float		delta_x;
 	float		delta_y;
+	int			limits;
 
 	result = new_cub_ray_obj();
 //	if (!result)
@@ -2721,11 +2722,17 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
 	ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
 	*/
-	if (check_limits_dda(angle))
+	limits = check_limits_dda(angle);
+	if (limits)
 	{
-
-		result->del(result);
-		return (NULL);
+		if (limits == 1)
+			ray = dda_calculate_x_right(cub, delta_x, delta_y);
+		else if (limits == 2)
+			ray = dda_calculate_y_down(cub, delta_x, delta_y);
+		else if (limits == 3)
+			ray = dda_calculate_x_left(cub, delta_x, delta_y);
+		else if (limits == 4)
+			ray = dda_calculate_y_up(cub, delta_x, delta_y);
 	}
 	else if ((int)angle < 90 && (int)angle > 0)
 	{
@@ -2747,22 +2754,14 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	}
 	else if (angle > 180.0f && angle < 270.0f)
 	{
-		tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
 		tmp_ray1 = dda_calculate_x_left(cub, delta_x, delta_y);
+		tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
 		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
 	}
-	else
-	{
-		printf("testaaaaaaaaaaaaaaaaaaaaaaaaa\n");
-		result->del(result);
-		return (NULL);
-	}
-/*
 	hypo = distance_between_points(player, ray);
 	screen_dist = sin(deg2_rad(cub->player->camera->angle - angle)) * hypo;
 	screen_dist = sqrt((hypo * hypo) - (screen_dist * screen_dist));
-	*/
-	screen_dist = distance_between_points(player, ray);
+	//screen_dist = distance_between_points(player, ray);
 	result->x = (int)ray.px;
 	result->y = (int)ray.py;
 	result->dist = screen_dist;
