@@ -2456,9 +2456,11 @@ int	clean_pixels(t_img *img)
 typedef	struct s_cub_ray
 {
 	int		hit;
+	int		side;
 	int		x;
 	int		y;
 	float	dist;
+	float	real_dist;
 	float	deltx;
 	float	delty;
 	int		(*del)();
@@ -2525,9 +2527,11 @@ t_point	dda_calculate_y_down(t_cub *cub, float delta_x, float delta_y)
 	int		map_check;
 	float	dist;
 
+
+	result.pz = 2.0f;
 	player = cub->player->camera->pos;
 	result.py = (float)((int)player.py + 1.0f);
-	result.py += 0.01f;
+	result.py += 0.000001f;
 	result.px = player.px + delta_x * (get_dist_delt(delta_y, result.py, player.py));
 
 	map_check = dda_check_map(cub, result);
@@ -2553,9 +2557,10 @@ t_point	dda_calculate_y_up(t_cub *cub, float delta_x, float delta_y)
 	int		map_check;
 	float	dist;
 
+	result.pz = 0.0f;
 	player = cub->player->camera->pos;
 	result.py = (float)((int)player.py);
-	result.py -= 0.01f;
+	result.py -= 0.000001f;
 	result.px = player.px + delta_x * (get_dist_delt(delta_y, result.py, player.py));
 
 	map_check = dda_check_map(cub, result);
@@ -2580,9 +2585,10 @@ t_point	dda_calculate_x_right(t_cub *cub, float delta_x, float delta_y)
 	int		map_check;
 	float	dist;
 
+	result.pz = 1.0f;
 	player = cub->player->camera->pos;
 	result.px = (float)((int)player.px + 1);
-	result.px += 0.01f;
+	result.px += 0.000001f;
 	result.py = player.py + delta_y * (get_dist_delt(delta_x, result.px, player.px));
 
 	map_check = dda_check_map(cub, result);
@@ -2609,9 +2615,10 @@ t_point	dda_calculate_x_left(t_cub *cub, float delta_x, float delta_y)
 	float	dist;
 	t_point	tmp;
 
+	result.pz = 3.0f;
 	player = cub->player->camera->pos;
 	result.px = (float)((int)player.px);
-	result.px -= 0.01f;
+	result.px -= 0.000001f;
 	result.py = player.py + delta_y * (get_dist_delt(delta_x, result.px, player.px));
 
 	map_check = dda_check_map(cub, result);
@@ -2709,19 +2716,14 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	int			limits;
 
 	result = new_cub_ray_obj();
-//	if (!result)
-//		return (NULL);
+
 	player = cub->player->camera->pos;
 	ray = player;
 	delta_x = cos(deg2_rad(angle));
 	delta_y = sin(deg2_rad(angle));
 	ray.px += delta_x * distance;
 	ray.py += delta_y * distance;
-	/*
-	tmp_ray1 = dda_calculate_x_right(cub, delta_x, delta_y);
-	tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
-	ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
-	*/
+
 	limits = check_limits_dda(angle);
 	if (limits)
 	{
@@ -2761,50 +2763,56 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	hypo = distance_between_points(player, ray);
 	screen_dist = sin(deg2_rad(cub->player->camera->angle - angle)) * hypo;
 	screen_dist = sqrt((hypo * hypo) - (screen_dist * screen_dist));
-	//screen_dist = distance_between_points(player, ray);
 	result->x = (int)ray.px;
 	result->y = (int)ray.py;
 	result->dist = screen_dist;
 	result->deltx = delta_x;
 	result->delty = delta_y;
+	result->real_dist = distance_between_points(ray, player);
+
+	result->side = (int)ray.pz;
 	if (result->dist < distance)
 		result->hit = 1;
 	return (result);
 }
 
-void draw_wall(int wall_height, t_cub *cub, size_t wall_n)
+void draw_wall(int wall_height, t_cub *cub, size_t wall_n, int side)
 {
-    int wall_top = (int)(cub->main_window->res.height - (float)wall_height) / 2;
-    int wall_bottom = wall_top + wall_height;
+    int wall_top;
+    int wall_bottom;
+	int	y;
 
-    // Ensure we don't go out of screen bounds
+	wall_top = (int)(cub->main_window->res.height - (float)wall_height) / 2;
+	wall_bottom = wall_top + wall_height;
     if (wall_top < 0)
 		wall_top = 0;
     if (wall_bottom >= cub->main_window->res.height) 
 		wall_bottom = (int)(cub->main_window->res.height - 1.0f);
-
-    for (int y = wall_top; y < wall_bottom; y++) {
-		put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(GREEN)));
-    }
+	y = wall_top;
+	while (y < wall_bottom)
+	{
+		if (side == 1 || side == 3)
+			put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(GREEN)));
+		else if (side == 0 || side == 2)
+			put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(WHITE)));
+		else if (side == 4)
+			put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(RED)));
+		else
+			put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(BLUE)));
+		y++;
+	}
 }
 
-void	draw_walls_from_ray(size_t ray_n, t_cub *cub, t_cub_ray *ray)
+void	draw_walls_from_ray(size_t ray_n, float angle, t_cub *cub, t_cub_ray *ray)
 {
 	t_point	tmp;
 	int		wall_height;
-	float	right_dist;
 
 	if (!ray)
 		return ;
 	tmp = cub->player->camera->pos;
-	right_dist = ray->dist;
-	wall_height = (int)(cub->main_window->res.height / right_dist);
-	draw_wall(wall_height, cub, ray_n);
-	/*
-	tmp.px += ray->deltx * ray->dist;
-	tmp.py += ray->delty * ray->dist;
-	draw_line_remap(line(tmp, cub->player->camera->pos), cub->map_editor, cub->editor_img, color(GREEN));
-	*/
+	wall_height = (int)(cub->main_window->res.height / ray->dist);
+	draw_wall(wall_height, cub, ray_n, ray->side);
 	ray->del(ray);
 }
 
@@ -2822,7 +2830,7 @@ int	ray_casting(t_cub *cub, t_map_editor minimap)
 	iterator = 0;
 	while (iterator < number_of_rays)
 	{
-		draw_walls_from_ray(iterator, cub, cub_cast_ray(cub, fix_angle(start_angle), 10.0f, minimap));
+		draw_walls_from_ray(iterator, start_angle, cub, cub_cast_ray(cub, fix_angle(start_angle), 10.0f, minimap));
 		iterator++;
 		start_angle += multiplier;
 	}
@@ -3458,6 +3466,7 @@ int	main(int argc, char **argv)
 
 	cub->player->camera->pos.px = 2;
 	cub->player->camera->pos.py = 2;
+	cub->player->camera->fov = 90;
 
 	// here goes the real angle and the real camera
 
