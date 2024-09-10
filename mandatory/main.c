@@ -2607,9 +2607,10 @@ t_point	dda_calculate_x_left(t_cub *cub, float delta_x, float delta_y)
 	t_point	player;
 	int		map_check;
 	float	dist;
+	t_point	tmp;
 
 	player = cub->player->camera->pos;
-	result.px = (float)((int)player.px + 1);
+	result.px = (float)((int)player.px);
 	result.px -= 0.01f;
 	result.py = player.py + delta_y * (get_dist_delt(delta_x, result.px, player.px));
 
@@ -2639,7 +2640,13 @@ t_point	compare_dists(t_point start, t_point *dist1, t_point *dist2, t_point *di
 
 	distc = -1.0f;
 	dista = distance_between_points(start, *dist1);
+	if (dista < 0.0f)
+		dista = dista * -1.0f;
 	distb = distance_between_points(start, *dist2);
+	if (distb < 0.0f)
+		distb = distb * -1.0f;
+
+	if (distb)
 	if (dist3)
 		distc = distance_between_points(start, *dist3);
 	if (dista < distb)
@@ -2738,8 +2745,15 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 		tmp_ray2 = dda_calculate_y_down(cub, delta_x, delta_y);
 		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
 	}
+	else if (angle > 180.0f && angle < 270.0f)
+	{
+		tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
+		tmp_ray1 = dda_calculate_x_left(cub, delta_x, delta_y);
+		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
+	}
 	else
 	{
+		printf("testaaaaaaaaaaaaaaaaaaaaaaaaa\n");
 		result->del(result);
 		return (NULL);
 	}
