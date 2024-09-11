@@ -2723,18 +2723,20 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	delta_y = sin(deg2_rad(angle));
 	ray.px += delta_x * distance;
 	ray.py += delta_y * distance;
+	ray.pz = -1.0f;
 
 	limits = check_limits_dda(angle);
 	if (limits)
 	{
 		if (limits == 1)
-			ray = dda_calculate_x_right(cub, delta_x, delta_y);
+			tmp_ray1 = dda_calculate_x_right(cub, delta_x, delta_y);
 		else if (limits == 2)
-			ray = dda_calculate_y_down(cub, delta_x, delta_y);
+			tmp_ray1 = dda_calculate_y_down(cub, delta_x, delta_y);
 		else if (limits == 3)
-			ray = dda_calculate_x_left(cub, delta_x, delta_y);
+			tmp_ray1 = dda_calculate_x_left(cub, delta_x, delta_y);
 		else if (limits == 4)
-			ray = dda_calculate_y_up(cub, delta_x, delta_y);
+			tmp_ray1 = dda_calculate_y_up(cub, delta_x, delta_y);
+		ray = compare_dists(player, &tmp_ray1, &ray, NULL);
 	}
 	else if ((int)angle < 90 && (int)angle > 0)
 	{
@@ -2770,40 +2772,109 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	result->delty = delta_y;
 	result->real_dist = distance_between_points(ray, player);
 
-	result->side = (int)ray.pz;
+	if (ray.pz > -1.0f)
+	{
+		result->side = (int)ray.pz;
+		result->hit = 1;
+	}
+	else
+	{
+		result->hit = 0;
+		result->side = (int)ray.pz;
+	}
 	if (result->dist < distance)
 		result->hit = 1;
 	return (result);
 }
 
-void draw_wall(int wall_height, t_cub *cub, size_t wall_n, int side)
+draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, float lerp, int wall_height)
 {
-    int wall_top;
-    int wall_bottom;
-	int	y;
+	int		i;
+	int		j;
+	t_point	pixel;
+	float	size_of_ceiling;
+	float	size_of_ground;
+
+	i = 0;
+	size_of_ceiling = wall_top;
+	//size_of_ceiling = (float)cub->main_window->res.height / 2.0f;
+	while (i < wall_top)
+	{
+		pixel.px = (float)wall_n;
+		pixel.py = (float)i;
+		pixel.color = color(WHITE);
+		//pixel.color = color_mix(color(WHITE), color(BLACK), (float)i / size_of_ceiling);
+		pixel.color = color_mix(pixel.color, color(BLACK), (float)i / ((float)cub->main_window->res.height / 2.0f));
+		put_pixel(cub->game_img, pixel);
+		i++;
+	}
+	i = wall_bottom;
+	j = 0;
+	size_of_ground = cub->main_window->res.height - wall_bottom;
+	while (i < cub->main_window->res.height)
+	{
+		pixel.px = (float)wall_n;
+		pixel.py = (float)i;
+		pixel.color = color(RED);
+		pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)cub->main_window->res.height / 2.0f)));
+		/*
+		if (j < wall_height)
+			pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)cub->main_window->res.height / 2.0f)));
+		else
+			pixel.color = color_mix(pixel.color, color(BLACK), ((float)(cub->main_window->res.height - i) / ((float)cub->main_window->res.height / 2.0f)));
+		*/
+		//pixel.color = color_mix(color(WHITE), color(BLACK), lerp);
+		put_pixel(cub->game_img, pixel);
+		i++;
+		j++;
+	}
+}
+
+void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, int side, float dist)
+{
+    int		wall_top;
+	int		min_top;
+    int		wall_bottom;
+	t_point	pixel;
+	float	color_mix_lerp;
+	int		y;
+	int		real_pos;
 
 	wall_top = (int)(cub->main_window->res.height - (float)wall_height) / 2;
+	min_top = wall_top;
 	wall_bottom = wall_top + wall_height;
     if (wall_top < 0)
 		wall_top = 0;
     if (wall_bottom >= cub->main_window->res.height) 
 		wall_bottom = (int)(cub->main_window->res.height - 1.0f);
+	color_mix_lerp = dist / max_dist;
+	draw_sky_and_ground(wall_top, wall_bottom, cub, wall_n, color_mix_lerp, wall_height);
 	y = wall_top;
 	while (y < wall_bottom)
 	{
-		if (side == 1 || side == 3)
-			put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(GREEN)));
-		else if (side == 0 || side == 2)
-			put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(WHITE)));
-		else if (side == 4)
-			put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(RED)));
+		real_pos = y - min_top;
+		pixel.px = (float)wall_n;
+		pixel.py = (float)y;
+		pixel.color	= color(GREEN);
+		if (real_pos < (wall_height / 2))
+			pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)real_pos / (float)wall_height));
 		else
-			put_pixel(cub->game_img, color_point(point((float)wall_n, (float)y), color(BLUE)));
+			pixel.color = color_mix(pixel.color, color(BLACK), ((float)real_pos / (float)wall_height));
+		pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
+		//if (side > -1)
+			put_pixel(cub->game_img, pixel);
+		/*
+		else
+		{
+			pixel.color = color_from_rgb(255, 0, 255);
+			put_pixel(cub->game_img, pixel);
+		}
+		*/
 		y++;
 	}
 }
 
-void	draw_walls_from_ray(size_t ray_n, float angle, t_cub *cub, t_cub_ray *ray)
+void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, t_cub_ray *ray)
 {
 	t_point	tmp;
 	int		wall_height;
@@ -2812,7 +2883,10 @@ void	draw_walls_from_ray(size_t ray_n, float angle, t_cub *cub, t_cub_ray *ray)
 		return ;
 	tmp = cub->player->camera->pos;
 	wall_height = (int)(cub->main_window->res.height / ray->dist);
-	draw_wall(wall_height, cub, ray_n, ray->side);
+	if (cub->game_mode == GAME)
+		draw_wall(max_dist, wall_height, cub, ray_n, ray->side, ray->real_dist);
+	if (cub->game_mode == EDITOR)
+		draw_line_remap(line(tmp, point(ray->x, ray->y)), cub->map_editor, cub->editor_img, color(GREEN));
 	ray->del(ray);
 }
 
@@ -2822,15 +2896,17 @@ int	ray_casting(t_cub *cub, t_map_editor minimap)
 	size_t	iterator;
 	float	start_angle;
 	float	multiplier;
+	float	max_dist;
 
 	number_of_rays = cub->main_window->res.width;
 	multiplier = (float)cub->player->camera->fov / (float)number_of_rays;
 	start_angle = cub->player->camera->angle;
 	start_angle = start_angle - (cub->player->camera->fov / 2.0f);
 	iterator = 0;
+	max_dist = 10.0f;
 	while (iterator < number_of_rays)
 	{
-		draw_walls_from_ray(iterator, start_angle, cub, cub_cast_ray(cub, fix_angle(start_angle), 10.0f, minimap));
+		draw_walls_from_ray(max_dist, iterator, start_angle, cub, cub_cast_ray(cub, fix_angle(start_angle), max_dist, minimap));
 		iterator++;
 		start_angle += multiplier;
 	}
@@ -3403,14 +3479,14 @@ int	main(int argc, char **argv)
 	
    char **map;
 
-	map = malloc(sizeof(char *) * 8);
-	ft_bzero(map, sizeof(char *) * 8);
+	map = malloc(sizeof(char *) * 80);
+	ft_bzero(map, sizeof(char *) * 80);
     // Fill the map with '1's on the borders and '0's inside
-    for (int i = 0; i < 7; i++) {
-		map[i] = malloc(sizeof(char) * 8);
-		ft_bzero(map[i], sizeof(char) * 8);
-        for (int j = 0; j < 7; j++) {
-            if (i == 0 || i == 6 || j == 0 || j == 6) {
+    for (int i = 0; i < 79; i++) {
+		map[i] = malloc(sizeof(char) * 80);
+		ft_bzero(map[i], sizeof(char) * 80);
+        for (int j = 0; j < 79; j++) {
+            if (i == 0 || i == 78 || j == 0 || j == 78) {
                 map[i][j] = '1'; // Borders
             } else {
                 map[i][j] = '0'; // Inside
@@ -3419,7 +3495,9 @@ int	main(int argc, char **argv)
     }
 
     // Place the player 'P' in the middle (3,3)
-    //map[3][3] = 'P';
+    map[3][3] = '1';
+    map[4][4] = '1';
+    map[4][5] = '1';
 
     // Print the map
     for (int i = 0; i < 7; i++) {
