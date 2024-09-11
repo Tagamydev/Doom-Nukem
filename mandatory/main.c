@@ -2458,7 +2458,9 @@ typedef	struct s_cub_ray
 	int		hit;
 	int		side;
 	int		x;
+	float	real_x;
 	int		y;
+	float	real_y;
 	float	dist;
 	float	real_dist;
 	float	deltx;
@@ -2685,20 +2687,10 @@ int	check_limits_dda_util(int angle)
 int	check_limits_dda(float angle)
 {
 	int	angle_m;
-	int	angle_sum;
-	int	angle_sub;
 	int	result;
 
 	angle_m = (int)angle;
-	angle_sum = (int)angle + 1;
-	angle_sub = (int)angle - 1;
 	result = check_limits_dda_util(angle_m);
-	if (result)
-		return (result);
-	result = check_limits_dda_util(angle_sum);
-	if (result)
-		return (result);
-	result = check_limits_dda_util(angle_sub);
 	return (result);
 }
 
@@ -2762,10 +2754,13 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 		tmp_ray2 = dda_calculate_y_up(cub, delta_x, delta_y);
 		ray = compare_dists(player, &tmp_ray1, &tmp_ray2, &ray);
 	}
+	/**/
 	hypo = distance_between_points(player, ray);
 	screen_dist = sin(deg2_rad(cub->player->camera->angle - angle)) * hypo;
 	screen_dist = sqrt((hypo * hypo) - (screen_dist * screen_dist));
 	result->x = (int)ray.px;
+	result->real_x = ray.px;
+	result->real_y = ray.py;
 	result->y = (int)ray.py;
 	result->dist = screen_dist;
 	result->deltx = delta_x;
@@ -2816,21 +2811,65 @@ draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, fl
 		pixel.px = (float)wall_n;
 		pixel.py = (float)i;
 		pixel.color = color(RED);
-		pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)cub->main_window->res.height / 2.0f)));
-		/*
-		if (j < wall_height)
-			pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)cub->main_window->res.height / 2.0f)));
-		else
-			pixel.color = color_mix(pixel.color, color(BLACK), ((float)(cub->main_window->res.height - i) / ((float)cub->main_window->res.height / 2.0f)));
-		*/
-		//pixel.color = color_mix(color(WHITE), color(BLACK), lerp);
+		//pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)cub->main_window->res.height / 2.0f)));
 		put_pixel(cub->game_img, pixel);
 		i++;
 		j++;
 	}
 }
 
-void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, int side, float dist)
+int	get_pixel_img(t_img *img, int x, int y)
+{
+	return (*(unsigned int *)((img->data_addr + \
+	(y * img->line_size) + (x * img->bits_per_pixel / 8))));
+}
+
+int	ft_get_color(int color, int col)
+{
+	if (col == 0)
+		return ((color >> 24) & 0xFF);
+	if (col == 1)
+		return ((color >> 16) & 0xFF);
+	if (col == 2)
+		return ((color >> 8) & 0xFF);
+	if (col == 3)
+		return ((color) & 0xFF);
+	return (0);
+}
+
+t_color	color_from_hex(int hex)
+{
+	t_color	result;
+
+	result.r = ft_get_color(hex, 1);
+	result.g = ft_get_color(hex, 2);
+	result.b = ft_get_color(hex, 3);
+	result.alpha = (float)ft_get_color(hex, 0) / 255.0f;
+	result.hex = hex;
+	return (result);
+}
+
+float	get_real_pos_x(float x, float y, int side)
+{
+	float	tmp;
+	float	result;
+
+	if (side == 0 || side == 2)
+	{
+		tmp = (int)x;
+		if (side == 0)
+			return (x - tmp);
+		else
+			return (1.0f - (x - tmp));
+	}
+	tmp = (int)y;
+	if (side == 1)
+		return (y - tmp);
+	else
+		return (1.0f - (y - tmp));
+}
+
+void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub_ray *ray)
 {
     int		wall_top;
 	int		min_top;
@@ -2839,6 +2878,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, int s
 	float	color_mix_lerp;
 	int		y;
 	int		real_pos;
+	float	real_pos_x;
 
 	wall_top = (int)(cub->main_window->res.height - (float)wall_height) / 2;
 	min_top = wall_top;
@@ -2847,19 +2887,24 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, int s
 		wall_top = 0;
     if (wall_bottom >= cub->main_window->res.height) 
 		wall_bottom = (int)(cub->main_window->res.height - 1.0f);
-	color_mix_lerp = dist / max_dist;
+	color_mix_lerp = ray->dist / max_dist;
 	draw_sky_and_ground(wall_top, wall_bottom, cub, wall_n, color_mix_lerp, wall_height);
 	y = wall_top;
+	real_pos_x = get_real_pos_x(ray->real_x, ray->real_y, ray->side);
+	printf("%f\n", real_pos_x);
 	while (y < wall_bottom)
 	{
 		real_pos = y - min_top;
 		pixel.px = (float)wall_n;
 		pixel.py = (float)y;
 		pixel.color	= color(GREEN);
+		pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
+		/*
 		if (real_pos < (wall_height / 2))
 			pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)real_pos / (float)wall_height));
 		else
 			pixel.color = color_mix(pixel.color, color(BLACK), ((float)real_pos / (float)wall_height));
+			*/
 		pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
 		//if (side > -1)
 			put_pixel(cub->game_img, pixel);
@@ -2878,15 +2923,21 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 {
 	t_point	tmp;
 	int		wall_height;
+	float	dist;
 
 	if (!ray)
 		return ;
 	tmp = cub->player->camera->pos;
-	wall_height = (int)(cub->main_window->res.height / ray->dist);
+	dist = ray->real_dist;
+	dist = cub->player->camera->angle - angle;
+	dist = deg2_rad(dist);
+	dist = ray->real_dist * cos(dist);
+	wall_height = (int)((float)cub->main_window->res.height / dist);
 	if (cub->game_mode == GAME)
-		draw_wall(max_dist, wall_height, cub, ray_n, ray->side, ray->real_dist);
+		draw_wall(max_dist, wall_height, cub, ray_n, ray);
 	if (cub->game_mode == EDITOR)
 		draw_line_remap(line(tmp, point(ray->x, ray->y)), cub->map_editor, cub->editor_img, color(GREEN));
+
 	ray->del(ray);
 }
 
@@ -2936,6 +2987,7 @@ int	game_mode(t_cub *cub)
 
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->game_img->img, 0, 0);
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->minimap_img->img, 0, 0);
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->test_tex->img, 400, 0);
 }
 
 int	draw_square(size_t length, t_img *img, t_point start)
@@ -3427,7 +3479,7 @@ int	main(int argc, char **argv)
 
 
 	//================================================================================
-	cub->main_window = new_window(cub->mlx, resolution(1920, 1080), "main_window");
+	cub->main_window = new_window(cub->mlx, resolution(1080, 1080), "main_window");
 
 	if (!cub->main_window)
 	{
@@ -3537,6 +3589,7 @@ int	main(int argc, char **argv)
 	cub->fov1_screen.color = color(WHITE);
 	cub->fov2_screen.color = color(WHITE);
 	// make screen limits
+	cub->test_tex = open_img(cub->mlx, "./srcs/side.xpm");
 
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->editor_img->img, 0, 0);
 
@@ -3544,7 +3597,7 @@ int	main(int argc, char **argv)
 
 	cub->player->camera->pos.px = 2;
 	cub->player->camera->pos.py = 2;
-	cub->player->camera->fov = 90;
+	cub->player->camera->fov = 55;
 
 	// here goes the real angle and the real camera
 
