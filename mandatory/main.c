@@ -2807,7 +2807,7 @@ draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, fl
 	{
 		pixel.px = (float)wall_n;
 		pixel.py = (float)i;
-		pixel.color = color(RED);
+		pixel.color = color(WHITE);
 		//pixel.color = color_mix(color(WHITE), color(BLACK), (float)i / size_of_ceiling);
 		pixel.color = color_mix(pixel.color, color(BLACK), (float)i / ((float)(cub->main_window->res.height - max_wall_height)/ 2.0f));
 		put_pixel(cub->game_img, pixel);
@@ -2822,12 +2822,11 @@ draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, fl
 
 		pixel.px = (float)wall_n;
 		pixel.py = (float)i;
-		pixel.color = color(RED);
+		pixel.color = color(WHITE);
 		//pixel.color = color_from_hex(get_pixel_img(cub->test_tex, textureX, textureY));
 
-		//pixel.color = color(RED);
-		pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)(cub->main_window->res.height - max_wall_height)/ 2.0f)));
-		//pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)cub->main_window->res.height / 2.0f)));
+		//pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)(cub->main_window->res.height - max_wall_height)/ 2.0f)));
+		pixel.color = color_mix(color(BLACK), pixel.color,(float)(i - (cub->main_window->res.height / 2) - (max_wall_height / 2)) / ((float)(cub->main_window->res.height - max_wall_height)/ 2.0f));
 		put_pixel(cub->game_img, pixel);
 		i++;
 		j++;
@@ -3083,40 +3082,28 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		real_pos = y - min_top;
 		pixel.px = (float)wall_n;
 		pixel.py = (float)y;
-		pixel.color	= color(GREEN);
-		pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
+		pixel.color	= color(WHITE);
+		//pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
+
+		// SHADOW
+		/*
 		shadow = get_shadow(cub, shadow_case, real_pos_x, ((float)real_pos / (float)wall_height), ray->side);
 		shadow = 1.0f - shadow;
 		shadow *= cub->ambient_oclussion;
 		shadow = 1.0f - shadow;
-		//shadow = shadow * (1.0f + cub->ambient_oclussion);
 		pixel.color = color_mix(color(BLACK), pixel.color, shadow);
-
-
-
-		/*
-		if (real_pos < (wall_height / 2))
-			pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)real_pos / (float)wall_height));
-		else
-			pixel.color = color_mix(pixel.color, color(BLACK), ((float)real_pos / (float)wall_height));
-			*/
 		pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
-		//if (side > -1)
+		*/
+
 		put_pixel(cub->game_img, pixel);
 		
-
-		//here chat gpt!!! this is the failure mirror code
+		// MIRROR
+		/*
 		mirror_y = wall_bottom + (wall_bottom - y);
 		pixel.py = (float)mirror_y;
 		pixel.py -= 1.0f;
 		pixel.color = color_mix(pixel.color, color_from_hex(get_pixel_img(cub->game_img, (int)pixel.px, (int)pixel.py)), (1.0f - (float)real_pos / (float)wall_height));
 		put_pixel(cub->game_img, pixel);
-		/*
-		else
-		{
-			pixel.color = color_from_rgb(255, 0, 255);
-			put_pixel(cub->game_img, pixel);
-		}
 		*/
 		y++;
 	}
@@ -3190,7 +3177,7 @@ int	game_mode(t_cub *cub)
 
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->game_img->img, 0, 0);
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->minimap_img->img, 0, 0);
-	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->test_tex->img, 400, 0);
+	//mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->test_tex->img, 400, 0);
 }
 
 int	draw_square(size_t length, t_img *img, t_point start)
@@ -3682,7 +3669,7 @@ int	main(int argc, char **argv)
 
 
 	//================================================================================
-	cub->main_window = new_window(cub->mlx, resolution(1080, 1080), "main_window");
+	cub->main_window = new_window(cub->mlx, resolution(1000, 1000), "main_window");
 
 	if (!cub->main_window)
 	{
