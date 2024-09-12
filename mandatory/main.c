@@ -2999,6 +2999,31 @@ void create_checker_texture()
     }
 }
 
+void create_arrow_texture()
+{
+    // Loop through the 32x32 array
+    for (int i = 0; i < 32; i++)
+    {
+        for (int j = 0; j < 32; j++)
+        {
+            // Set everything to black (background)
+            shadow_1[i][j] = 0.0f;
+
+            // Define the arrow pointing to the left
+            // Head of the arrow (triangle shape)
+            if (j <= 15 && (i >= 8 - j / 2 && i <= 23 + j / 2))
+            {
+                shadow_1[i][j] = 1.0f;  // Arrow head is white
+            }
+            // Tail of the arrow (rectangle shape)
+            if (j > 15 && i >= 12 && i <= 19)
+            {
+                shadow_1[i][j] = 1.0f;  // Arrow tail is white
+            }
+        }
+    }
+}
+
 float	get_shadow(t_cub *cub, int shadow_case, float x_lerp, float y_lerp)
 {
 	if (!shadow_case)
@@ -3010,22 +3035,26 @@ float	get_shadow(t_cub *cub, int shadow_case, float x_lerp, float y_lerp)
 			if (shadow_case == 0)
 				return (0);
 			if (shadow_case == 1)
-				return (shadow_1[(int)(x_lerp * 32.0f)][(int)(y_lerp * 32.0f)]);
+			{
+				x_lerp = 1.0f - x_lerp;
+				y_lerp = 1.0f - y_lerp;
+				return (shadow_1[(int)(y_lerp * 31.0f)][(int)(x_lerp * 31.0f)]);
+			}
 			if (shadow_case == 10)
-				return (shadow_1[(int)(x_lerp * 32.0f)][(int)(y_lerp * 32.0f)]);
+				return (shadow_1[(int)(y_lerp * 31.0f)][(int)(x_lerp * 31.0f)]);
 			if (shadow_case == 11)
-				return (shadow_1[(int)(x_lerp * 32.0f)][(int)(y_lerp * 32.0f)]);
+				return (shadow_1[(int)(x_lerp * 31.0f)][(int)(y_lerp * 31.0f)]);
 		}
 		else
 		{
 			if (shadow_case == 100)
 				return (0);
 			if (shadow_case == 101)
-				return (shadow_1[(int)(x_lerp * 32.0f)][(int)(y_lerp * 32.0f)]);
+				return (shadow_1[(int)(x_lerp * 31.0f)][(int)(y_lerp * 31.0f)]);
 			if (shadow_case == 110)
-				return (shadow_1[(int)(x_lerp * 32.0f)][(int)(y_lerp * 32.0f)]);
+				return (shadow_1[(int)(x_lerp * 31.0f)][(int)(y_lerp * 31.0f)]);
 			if (shadow_case == 111)
-				return (shadow_1[(int)(x_lerp * 32.0f)][(int)(y_lerp * 32.0f)]);
+				return (shadow_1[(int)(x_lerp * 31.0f)][(int)(y_lerp * 31.0f)]);
 		}
 	}
 	return (0);
@@ -3767,7 +3796,8 @@ int	main(int argc, char **argv)
 	cub->player->camera->pos.px = 2;
 	cub->player->camera->pos.py = 2;
 	cub->player->camera->fov = 55;
-	create_checker_texture();
+	//create_checker_texture();
+	create_arrow_texture();
 
 	// here goes the real angle and the real camera
 
