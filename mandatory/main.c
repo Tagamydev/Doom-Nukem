@@ -2947,7 +2947,7 @@ void create_arrow_texture(float	**shadow_tex, float size)
 	int		j;
 
 	texture = shadow_tex;
-	half = size / 4.0f;
+	half = size;
 	i = 0;
 	j = 0;
 	while (i < (int)size)
@@ -3011,7 +3011,7 @@ float	get_shadow(t_cub *cub, int shadow_case, float x_lerp, float y_lerp, int si
 			{
 				tex1 = cub->shadow_tex[(int)(x_lerp * size)][(int)(y_lerp * size)];
 				tex2 = cub->shadow_tex[(int)(inverted_x * size)][(int)(inverted_y * size)];
-				return (result * tex2 * tex1);
+				return ((result * tex2 * tex1) / 0.2f);
 			}
 		}
 		else
@@ -3037,7 +3037,7 @@ float	get_shadow(t_cub *cub, int shadow_case, float x_lerp, float y_lerp, int si
 			{
 				tex1 = cub->shadow_tex[(int)(x_lerp * size)][(int)(y_lerp * size)];
 				tex2 = cub->shadow_tex[(int)(inverted_x * size)][(int)(inverted_y * size)];
-				return (result * tex2 * tex1);
+				return ((result * tex2 * tex1) / 0.2f);
 			}
 		}
 	}
@@ -3077,6 +3077,10 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		pixel.color	= color(GREEN);
 		//pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
 		shadow = get_shadow(cub, shadow_case, real_pos_x, ((float)real_pos / (float)wall_height), ray->side);
+		shadow = 1.0f - shadow;
+		shadow *= cub->ambient_oclussion;
+		shadow = 1.0f - shadow;
+		//shadow = shadow * (1.0f + cub->ambient_oclussion);
 		pixel.color = color_mix(color(BLACK), pixel.color, shadow);
 
 
@@ -3802,6 +3806,7 @@ int	main(int argc, char **argv)
 		shadow_i++;
 	}
 	create_arrow_texture(cub->shadow_tex, cub->shadow_tex_size);
+	cub->ambient_oclussion = 0.85;
 
 	// here goes the real angle and the real camera
 

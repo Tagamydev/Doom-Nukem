@@ -84,8 +84,10 @@ typedef struct s_cub
 	t_img				*game_img;
 	t_img				*minimap_img;
 	t_img				*test_tex;
+
 	float				**shadow_tex;
 	float				shadow_tex_size;
+	float				ambient_oclussion;
 
 
 
