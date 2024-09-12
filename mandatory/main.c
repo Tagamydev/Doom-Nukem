@@ -2790,16 +2790,18 @@ int	get_pixel_img(t_img *img, int x, int y)
 	(y * img->line_size) + (x * img->bits_per_pixel / 8))));
 }
 
-draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, float lerp, int wall_height, t_cub_ray *ray, float angle)
+draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, float lerp, int wall_height, t_cub_ray *ray, float angle, float max_dist)
 {
 	int		i;
 	int		j;
 	t_point	pixel;
 	float	size_of_ceiling;
 	float	size_of_ground;
+	int		max_wall_height;
 
 	i = 0;
 	size_of_ceiling = wall_top;
+	max_wall_height = (int)((float)cub->main_window->res.height / max_dist);
 	//size_of_ceiling = (float)cub->main_window->res.height / 2.0f;
 	while (i < wall_top)
 	{
@@ -2807,7 +2809,7 @@ draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, fl
 		pixel.py = (float)i;
 		pixel.color = color(RED);
 		//pixel.color = color_mix(color(WHITE), color(BLACK), (float)i / size_of_ceiling);
-		//pixel.color = color_mix(pixel.color, color(BLACK), (float)i / ((float)cub->main_window->res.height / 2.0f));
+		pixel.color = color_mix(pixel.color, color(BLACK), (float)i / ((float)(cub->main_window->res.height - max_wall_height)/ 2.0f));
 		put_pixel(cub->game_img, pixel);
 		i++;
 	}
@@ -2824,9 +2826,11 @@ draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, fl
 		//pixel.color = color_from_hex(get_pixel_img(cub->test_tex, textureX, textureY));
 
 		//pixel.color = color(RED);
+		pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)(cub->main_window->res.height - max_wall_height)/ 2.0f)));
 		//pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)cub->main_window->res.height / 2.0f)));
 		put_pixel(cub->game_img, pixel);
 		i++;
+		j++;
 	}
 }
 
@@ -2978,6 +2982,10 @@ float	get_shadow(t_cub *cub, int shadow_case, float x_lerp, float y_lerp, int si
 
 	tex2 = 1;
 	tex3 = 1;
+	if (y_lerp < 0.0f || y_lerp > 1)
+		y_lerp = 0.0f;
+	if (x_lerp < 0.0f || x_lerp > 1)
+		x_lerp = 0.0f;
 	inverted_x = 1.0f - x_lerp;
 	inverted_y = 1.0f - y_lerp;
 	size = cub->shadow_tex_size - 1.0f;
@@ -3056,6 +3064,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 	float	real_pos_x;
 	float	shadow;
 	int		shadow_case;
+	int		mirror_y;
 
 	wall_top = (int)(cub->main_window->res.height - (float)wall_height) / 2;
 	min_top = wall_top;
@@ -3065,7 +3074,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
     if (wall_bottom >= cub->main_window->res.height) 
 		wall_bottom = (int)(cub->main_window->res.height - 1.0f);
 	color_mix_lerp = ray->dist / max_dist;
-	draw_sky_and_ground(wall_top, wall_bottom, cub, wall_n, color_mix_lerp, wall_height, ray, angle);
+	draw_sky_and_ground(wall_top, wall_bottom, cub, wall_n, color_mix_lerp, wall_height, ray, angle, max_dist);
 	y = wall_top;
 	real_pos_x = get_real_pos_x(ray->real_x, ray->real_y, ray->side);
 	shadow_case = get_shadow_case_from_ray(cub, ray);
@@ -3075,7 +3084,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		pixel.px = (float)wall_n;
 		pixel.py = (float)y;
 		pixel.color	= color(GREEN);
-		//pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
+		pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
 		shadow = get_shadow(cub, shadow_case, real_pos_x, ((float)real_pos / (float)wall_height), ray->side);
 		shadow = 1.0f - shadow;
 		shadow *= cub->ambient_oclussion;
@@ -3093,7 +3102,15 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 			*/
 		pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
 		//if (side > -1)
-			put_pixel(cub->game_img, pixel);
+		put_pixel(cub->game_img, pixel);
+		
+
+		//here chat gpt!!! this is the failure mirror code
+		mirror_y = wall_bottom + (wall_bottom - y);
+		pixel.py = (float)mirror_y;
+		pixel.py -= 1.0f;
+		pixel.color = color_mix(pixel.color, color_from_hex(get_pixel_img(cub->game_img, (int)pixel.px, (int)pixel.py)), (1.0f - (float)real_pos / (float)wall_height));
+		put_pixel(cub->game_img, pixel);
 		/*
 		else
 		{
@@ -3806,7 +3823,7 @@ int	main(int argc, char **argv)
 		shadow_i++;
 	}
 	create_arrow_texture(cub->shadow_tex, cub->shadow_tex_size);
-	cub->ambient_oclussion = 0.85;
+	cub->ambient_oclussion = 1;
 
 	// here goes the real angle and the real camera
 
