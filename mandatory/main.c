@@ -2817,16 +2817,60 @@ draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, fl
 	j = 0;
 	size_of_ground = cub->main_window->res.height - wall_bottom;
 
+	int	ground_distance;
+	float	pixel_proportion;
+	float	new_ray_distance;
+	float	new_x;
+	float	new_y;
+	int		map_x;
+	int		map_y;
+	int		last_int_x;
+	int		last_int_y;
+	int		color_bool;
+	
+	last_int_x = 0;
+	last_int_y = 0;
+	color_bool = 0;
+	ground_distance = cub->main_window->res.height - wall_bottom;
 	while (i < cub->main_window->res.height)
 	{
+		if (1)
+		{
+			pixel_proportion = (float)j / (float)ground_distance;
+			new_ray_distance = ray->dist;
+			new_ray_distance *= pixel_proportion;
 
-		pixel.px = (float)wall_n;
-		pixel.py = (float)i;
-		pixel.color = color(WHITE);
+			new_x = cub->player->camera->pos.px;
+			new_y = cub->player->camera->pos.py;
+
+			new_x += ray->deltx * new_ray_distance;
+			new_y += ray->delty * new_ray_distance;
+
+			map_x = (int)new_x;
+			map_y = (int)new_y;
+			if (map_x != last_int_x)
+				color_bool = !color_bool;
+			if (map_y != last_int_y)
+				color_bool = !color_bool;
+			if (map_x != last_int_x)
+				last_int_x = map_x;
+			if (map_y != last_int_y)
+				last_int_y = map_y;
+
+			pixel.px = (float)wall_n;
+			pixel.py = (float)i;
+			if (color_bool)
+				pixel.color = color(WHITE);
+			else
+				pixel.color = color(RED);
+		}
+		else
+			pixel.color = color(WHITE);
 		//pixel.color = color_from_hex(get_pixel_img(cub->test_tex, textureX, textureY));
 
 		//pixel.color = color_mix(pixel.color, color(BLACK), 1.0f - ((float)j / ((float)(cub->main_window->res.height - max_wall_height)/ 2.0f)));
-		pixel.color = color_mix(color(BLACK), pixel.color,(float)(i - (cub->main_window->res.height / 2) - (max_wall_height / 2)) / ((float)(cub->main_window->res.height - max_wall_height)/ 2.0f));
+		//pixel.color = color_mix(color(BLACK), pixel.color,(float)(i - (cub->main_window->res.height / 2) - (max_wall_height / 2)) / ((float)(cub->main_window->res.height - max_wall_height)/ 2.0f));
+		//pixel.color = color_mix(color(BLACK), pixel.color, pixel_proportion);
 		put_pixel(cub->game_img, pixel);
 		i++;
 		j++;
@@ -3125,8 +3169,10 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 	wall_height = (int)((float)cub->main_window->res.height / dist);
 	if (cub->game_mode == GAME)
 		draw_wall(max_dist, wall_height, cub, ray_n, ray, angle);
+	/*
 	if (cub->game_mode == EDITOR)
-		draw_line_remap(line(tmp, point(ray->x, ray->y)), cub->map_editor, cub->editor_img, color(GREEN));
+		draw_line_remap(line(tmp, point(ray->real_x, ray->real_y)), cub->map_editor, cub->editor_img, color(GREEN));
+	*/
 
 	ray->del(ray);
 }
