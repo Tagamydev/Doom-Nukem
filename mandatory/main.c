@@ -2938,123 +2938,107 @@ int	get_shadow_case_from_ray(t_cub *cub, t_cub_ray *ray)
 	return (n_case);
 }
 
-float	shadow_1[32][32] = 
-{
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f}
-};
 
-void create_checker_texture()
+void create_arrow_texture(float	**shadow_tex, float size)
 {
-    // Loop through the 32x32 array
-    for (int i = 0; i < 32; i++)
-    {
-        for (int j = 0; j < 32; j++)
-        {
-            // Determine whether the current 8x8 chunk should be black or white
-            int check_x = i / 8;
-            int check_y = j / 8;
+	float	**texture;
+	float	half;
+	int		i;
+	int		j;
 
-            if ((check_x + check_y) % 2 == 0)
-            {
-                // Set white (1.0f) for even chunks
-                shadow_1[i][j] = 1.0f;
-            }
-            else
-            {
-                // Set black (0.0f) for odd chunks
-                shadow_1[i][j] = 0.0f;
-            }
-        }
-    }
+	texture = shadow_tex;
+	half = size / 4.0f;
+	i = 0;
+	j = 0;
+	while (i < (int)size)
+	{
+		j = 0;
+		while (j < (int)size)
+		{
+			if (i < (int)half)
+				texture[i][j] = (float)i / half;
+			else
+				texture[i][j] = 1.0f;
+			j++;
+		}
+		i++;
+	}
 }
 
-void create_arrow_texture()
+float	get_shadow(t_cub *cub, int shadow_case, float x_lerp, float y_lerp, int side)
 {
-    // Loop through the 32x32 array
-    for (int i = 0; i < 32; i++)
-    {
-        for (int j = 0; j < 32; j++)
-        {
-            // Set everything to black (background)
-            shadow_1[i][j] = 0.0f;
+	float	size;
+	float	tex1;
+	float	tex2;
+	float	tex3;
+	float	tex4;
+	float	result;
+	float	inverted_x;
+	float	inverted_y;
 
-            // Define the arrow pointing to the left
-            // Head of the arrow (triangle shape)
-            if (j <= 15 && (i >= 8 - j / 2 && i <= 23 + j / 2))
-            {
-                shadow_1[i][j] = 1.0f;  // Arrow head is white
-            }
-            // Tail of the arrow (rectangle shape)
-            if (j > 15 && i >= 12 && i <= 19)
-            {
-                shadow_1[i][j] = 1.0f;  // Arrow tail is white
-            }
-        }
-    }
-}
-
-float	get_shadow(t_cub *cub, int shadow_case, float x_lerp, float y_lerp)
-{
-	if (!shadow_case)
-		return (0);
+	tex2 = 1;
+	tex3 = 1;
+	inverted_x = 1.0f - x_lerp;
+	inverted_y = 1.0f - y_lerp;
+	size = cub->shadow_tex_size - 1.0f;
+	tex1 = cub->shadow_tex[(int)(y_lerp * size)][(int)(x_lerp * size)];
+	tex4 = cub->shadow_tex[(int)(inverted_y * size)][(int)(inverted_x * size)];
+	result = tex1 * tex4;
+	if (!shadow_case || shadow_case == 100)
+		return (result);
 	else
 	{
 		if (shadow_case < 99)
 		{
-			if (shadow_case == 0)
-				return (0);
-			if (shadow_case == 1)
+			if (side == 1)
 			{
+				inverted_x = x_lerp;
+				inverted_y = y_lerp;
 				x_lerp = 1.0f - x_lerp;
 				y_lerp = 1.0f - y_lerp;
-				return (shadow_1[(int)(y_lerp * 31.0f)][(int)(x_lerp * 31.0f)]);
+			}
+			if (shadow_case == 1)
+			{
+				tex2 = cub->shadow_tex[(int)(inverted_x * size)][(int)(inverted_y * size)];
+				return (result * tex2);
 			}
 			if (shadow_case == 10)
-				return (shadow_1[(int)(y_lerp * 31.0f)][(int)(x_lerp * 31.0f)]);
+			{
+				tex2 = cub->shadow_tex[(int)(x_lerp * size)][(int)(y_lerp * size)];
+				return (result * tex2);
+			}
 			if (shadow_case == 11)
-				return (shadow_1[(int)(x_lerp * 31.0f)][(int)(y_lerp * 31.0f)]);
+			{
+				tex1 = cub->shadow_tex[(int)(x_lerp * size)][(int)(y_lerp * size)];
+				tex2 = cub->shadow_tex[(int)(inverted_x * size)][(int)(inverted_y * size)];
+				return (result * tex2 * tex1);
+			}
 		}
 		else
 		{
-			if (shadow_case == 100)
-				return (0);
+			if (side == 0)
+			{
+				inverted_x = x_lerp;
+				inverted_y = y_lerp;
+				x_lerp = 1.0f - x_lerp;
+				y_lerp = 1.0f - y_lerp;
+			}
 			if (shadow_case == 101)
-				return (shadow_1[(int)(x_lerp * 31.0f)][(int)(y_lerp * 31.0f)]);
+			{
+				tex2 = cub->shadow_tex[(int)(inverted_x * size)][(int)(inverted_y * size)];
+				return (result * tex2);
+			}
 			if (shadow_case == 110)
-				return (shadow_1[(int)(x_lerp * 31.0f)][(int)(y_lerp * 31.0f)]);
+			{
+				tex2 = cub->shadow_tex[(int)(x_lerp * size)][(int)(y_lerp * size)];
+				return (result * tex2);
+			}
 			if (shadow_case == 111)
-				return (shadow_1[(int)(x_lerp * 31.0f)][(int)(y_lerp * 31.0f)]);
+			{
+				tex1 = cub->shadow_tex[(int)(x_lerp * size)][(int)(y_lerp * size)];
+				tex2 = cub->shadow_tex[(int)(inverted_x * size)][(int)(inverted_y * size)];
+				return (result * tex2 * tex1);
+			}
 		}
 	}
 	return (0);
@@ -3092,8 +3076,8 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		pixel.py = (float)y;
 		pixel.color	= color(GREEN);
 		//pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
-		shadow = get_shadow(cub, shadow_case, real_pos_x, ((float)real_pos / (float)wall_height));
-		pixel.color = color_mix(pixel.color, color(BLACK), shadow);
+		shadow = get_shadow(cub, shadow_case, real_pos_x, ((float)real_pos / (float)wall_height), ray->side);
+		pixel.color = color_mix(color(BLACK), pixel.color, shadow);
 
 
 
@@ -3746,6 +3730,7 @@ int	main(int argc, char **argv)
 
     // Place the player 'P' in the middle (3,3)
     map[3][3] = '1';
+    map[3][5] = '1';
     map[4][4] = '1';
     map[4][5] = '1';
 
@@ -3796,8 +3781,27 @@ int	main(int argc, char **argv)
 	cub->player->camera->pos.px = 2;
 	cub->player->camera->pos.py = 2;
 	cub->player->camera->fov = 55;
-	//create_checker_texture();
-	create_arrow_texture();
+	cub->shadow_tex_size = 1000.0f;
+	cub->shadow_tex = malloc((size_t)(sizeof(float *) * cub->shadow_tex_size));
+	if (!cub->shadow_tex)
+	{
+		//error!!!!!
+		return (0);
+	}
+	int	shadow_i;
+
+	shadow_i = 0;
+	while (shadow_i < (int)cub->shadow_tex_size)
+	{
+		cub->shadow_tex[shadow_i] = malloc((size_t)(sizeof(float) * cub->shadow_tex_size));
+		if (!cub->shadow_tex[shadow_i])
+		{
+			//error!!!!!
+			return (0);
+		}
+		shadow_i++;
+	}
+	create_arrow_texture(cub->shadow_tex, cub->shadow_tex_size);
 
 	// here goes the real angle and the real camera
 
