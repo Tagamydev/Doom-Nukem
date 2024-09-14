@@ -89,6 +89,9 @@ typedef struct s_cub
 	float				shadow_tex_size;
 	float				ambient_oclussion;
 
+	float				max_dist;
+
+
 
 
 	char				*north_path;

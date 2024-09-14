@@ -1213,11 +1213,11 @@ int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col, t_img *img)
 
 	pos = cub->player->camera->pos;
 
-	fov1 = point(pos.px + (13.0  * cub->fov1_deltas.px), 
-	pos.py + (13.0  * cub->fov1_deltas.py));
+	fov1 = point(pos.px + (cub->max_dist  * cub->fov1_deltas.px), 
+	pos.py + (cub->max_dist  * cub->fov1_deltas.py));
 
-	fov2 = point(pos.px + (13.0  * cub->fov2_deltas.px), 
-	pos.py + (13.0  * cub->fov2_deltas.py));
+	fov2 = point(pos.px + (cub->max_dist  * cub->fov2_deltas.px), 
+	pos.py + (cub->max_dist  * cub->fov2_deltas.py));
 
 
 	pos = remap_point(pos, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
@@ -2671,7 +2671,7 @@ t_point	compare_dists(t_point start, t_point *dist1, t_point *dist2, t_point *di
 	return (*dist3);
 }
 
-int	check_limits_dda_util(int angle)
+int	check_limits_dda_util(float angle)
 {
 	if (angle == 0)
 		return (1);
@@ -2689,7 +2689,7 @@ int	check_limits_dda(float angle)
 	int	angle_m;
 	int	result;
 
-	angle_m = (int)angle;
+	angle_m = (int)(angle);
 	result = check_limits_dda_util(angle_m);
 	return (result);
 }
@@ -2718,6 +2718,7 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	ray.pz = -1.0f;
 
 	limits = check_limits_dda(angle);
+
 	if (limits)
 	{
 		if (limits == 1)
@@ -2836,6 +2837,7 @@ draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, fl
 	{
 		if (1)
 		{
+			/*
 			pixel_proportion = (float)j / (float)ground_distance;
 			new_ray_distance = ray->dist;
 			new_ray_distance *= pixel_proportion;
@@ -2857,12 +2859,13 @@ draw_sky_and_ground(int wall_top, int wall_bottom, t_cub *cub, size_t wall_n, fl
 			if (map_y != last_int_y)
 				last_int_y = map_y;
 
+			*/
 			pixel.px = (float)wall_n;
 			pixel.py = (float)i;
-			if (color_bool)
-				pixel.color = color(WHITE);
-			else
+			//if (color_bool)
 				pixel.color = color(RED);
+			//else
+			//	pixel.color = color(RED);
 		}
 		else
 			pixel.color = color(WHITE);
@@ -3117,7 +3120,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
     if (wall_bottom >= cub->main_window->res.height) 
 		wall_bottom = (int)(cub->main_window->res.height - 1.0f);
 	color_mix_lerp = ray->dist / max_dist;
-	draw_sky_and_ground(wall_top, wall_bottom, cub, wall_n, color_mix_lerp, wall_height, ray, angle, max_dist);
+	//draw_sky_and_ground(wall_top, wall_bottom, cub, wall_n, color_mix_lerp, wall_height, ray, angle, max_dist);
 	y = wall_top;
 	real_pos_x = get_real_pos_x(ray->real_x, ray->real_y, ray->side);
 	shadow_case = get_shadow_case_from_ray(cub, ray);
@@ -3153,6 +3156,129 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 	}
 }
 
+char	sample_map(char **map, float sample_x, float sample_y)
+{
+	int	max_x;
+	int	max_y;
+	int		x;
+	int		y;
+
+	max_x = 0;
+	max_y = 0;
+	while (map[max_y])
+		max_y++;
+	while (map[0][max_x])
+		max_x++;
+	if (max_y)
+		max_y--;
+	if (max_x)
+		max_x--;
+	x = (int)(sample_x);
+	y = (int)(sample_y);
+	if (x < 0 || y < 0)
+		return ('0');
+	if (x > max_x || y > max_y)
+		return ('0');
+	return (map[y][x]);
+}
+
+void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist)
+{
+	size_t	y;
+	size_t	helper;
+	t_point	pixel;
+	float	min_dist = 0.01f;
+	int		nMapSize = 80;
+	t_point	far_pt1;
+	t_point	far_pt2;
+	t_point	near_pt1;
+	t_point	near_pt2;
+
+	max_dist = max_dist * cub->player->camera->pos.pz;
+
+	far_pt1 = cub->player->camera->pos;
+	far_pt2 = cub->player->camera->pos;
+	near_pt1 = cub->player->camera->pos;
+	near_pt2 = cub->player->camera->pos;
+
+	far_pt1.px += cub->fov1_deltas.px * max_dist;
+	far_pt1.py += cub->fov1_deltas.py * max_dist;
+
+	far_pt2.px += cub->fov2_deltas.px * max_dist;
+	far_pt2.py += cub->fov2_deltas.py * max_dist;
+
+	near_pt1.px += cub->fov1_deltas.px * min_dist;
+	near_pt1.py += cub->fov1_deltas.py * min_dist;
+
+	near_pt2.px += cub->fov2_deltas.px * min_dist;
+	near_pt2.py += cub->fov2_deltas.py * min_dist;
+
+	float	sample_depth;
+	float	sample_width;
+	float	sample_x;
+	float	sample_y;
+	float	start_x;
+	float	start_y;
+	float	end_x;
+	float	end_y;
+	char	map_sample;
+	int		max_wall_height;
+	int		total_height;
+
+	helper = 0;
+	max_wall_height = (int)((float)cub->main_window->res.height / max_dist);
+	total_height = (cub->main_window->res.height - max_wall_height) / 2;
+	y = (cub->main_window->res.height) / 2;
+	sample_width = (float)x / (float)cub->main_window->res.width;
+	while (y < cub->main_window->res.height)
+	{
+		sample_depth = (float)helper / (float)((cub->main_window->res.height) / 2);
+
+		start_x = (far_pt1.px - near_pt1.px) / (sample_depth) + near_pt1.px;
+		start_y = (far_pt1.py - near_pt1.py) / (sample_depth) + near_pt1.py;
+
+		end_x = (far_pt2.px - near_pt2.px) / (sample_depth) + near_pt2.px;
+		end_y = (far_pt2.py - near_pt2.py) / (sample_depth) + near_pt2.py;
+
+		sample_x = (end_x - start_x) * sample_width + start_x;
+		sample_y = (end_y - start_y) * sample_width + start_y;
+
+		//printf("%f, %f\n", sample_x, sample_y);
+		map_sample = sample_map(cub->map, sample_x, sample_y);
+		if (map_sample == '1')
+			pixel.color = color(RED);
+		else
+		{
+			if ((int)sample_x % 2 == 0)
+			{
+				if ((int)sample_y % 2 == 0)
+					pixel.color = color(BLUE);
+				else
+					pixel.color = color(GREEN);
+			}
+			else
+			{
+				if ((int)sample_y % 2 == 0)
+					pixel.color = color(GREEN);
+				else
+					pixel.color = color(BLUE);
+			}
+		}
+
+		pixel.px = (float)x;
+		pixel.py = (float)y;
+		put_pixel(cub->game_img, pixel);
+		/*
+		sample_depth = 1.0f - sample_depth;
+		pixel.py = (float)cub->main_window->res.height / 2.0f;
+		pixel.py *= sample_depth;
+		put_pixel(cub->game_img, pixel);
+		*/
+		y++;
+		helper++;
+	}
+}
+
 void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, t_cub_ray *ray)
 {
 	t_point	tmp;
@@ -3167,12 +3293,13 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 	dist = deg2_rad(dist);
 	dist = ray->real_dist * cos(dist);
 	wall_height = (int)((float)cub->main_window->res.height / dist);
+	fake_mode_7(cub, ray, ray_n, max_dist);
+	/*
 	if (cub->game_mode == GAME)
 		draw_wall(max_dist, wall_height, cub, ray_n, ray, angle);
-	/*
 	if (cub->game_mode == EDITOR)
 		draw_line_remap(line(tmp, point(ray->real_x, ray->real_y)), cub->map_editor, cub->editor_img, color(GREEN));
-	*/
+		*/
 
 	ray->del(ray);
 }
@@ -3190,7 +3317,7 @@ int	ray_casting(t_cub *cub, t_map_editor minimap)
 	start_angle = cub->player->camera->angle;
 	start_angle = start_angle - (cub->player->camera->fov / 2.0f);
 	iterator = 0;
-	max_dist = 10.0f;
+	max_dist = cub->max_dist;
 	while (iterator < number_of_rays)
 	{
 		draw_walls_from_ray(max_dist, iterator, start_angle, cub, cub_cast_ray(cub, fix_angle(start_angle), max_dist, minimap));
@@ -3531,6 +3658,29 @@ int	key_press(int key, void *param)
 		printf("screen width:%f\n", distance_between_points(cub->fov1_screen, cub->fov2_screen));
 
 	}
+	if (key == XK_0)
+	{
+		cub->player->camera->fov -= 1.0f;
+		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, cub->player->camera->angle);
+	}
+	if (key == XK_9)
+	{
+		cub->player->camera->fov += 1.0f;
+		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, cub->player->camera->angle);
+	}
+	if (key == XK_1)
+	{
+		cub->player->camera->pos.pz -= 0.001f;
+		printf("height!!%f\n", cub->player->camera->pos.pz);
+		printf("fov!!%f\n", cub->player->camera->fov);
+	}
+	if (key == XK_2)
+	{
+		cub->player->camera->pos.pz += 0.001f;
+		printf("height!!%f\n", cub->player->camera->pos.pz);
+		printf("fov!!%f\n", cub->player->camera->fov);
+	}
+
 	if (cub->game_mode == GAME)
 		key_press_game(key, cub);
 	if (cub->game_mode == EDITOR)
@@ -3815,7 +3965,6 @@ int	main(int argc, char **argv)
 	cub->player->camera->angle = 90;
 
 	calculate_deltas(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas);
-
 	// make screen limits
 	cub->fov1_screen.pz = (float)(((float)(cub->main_window->res.width + 2) / 4.0f)) / cub->fov1_deltas.px;
 	cub->fov2_screen.pz = cub->fov1_screen.pz;
@@ -3832,10 +3981,13 @@ int	main(int argc, char **argv)
 
 	// here goes the real angle and the real camera
 	//77 73
-	cub->player->camera->pos.px = 2;
-	cub->player->camera->pos.py = 2;
-	cub->player->camera->fov = 55;
+	cub->player->camera->pos.px = 2.941313;
+	cub->player->camera->pos.py = 7.410974;
+	cub->player->camera->fov = 18;
 	cub->shadow_tex_size = 1000.0f;
+	cub->player->camera->pos.pz = 0.101f;
+	update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 270);
+
 	cub->shadow_tex = malloc((size_t)(sizeof(float *) * cub->shadow_tex_size));
 	if (!cub->shadow_tex)
 	{
@@ -3857,6 +4009,7 @@ int	main(int argc, char **argv)
 	}
 	create_arrow_texture(cub->shadow_tex, cub->shadow_tex_size);
 	cub->ambient_oclussion = 1;
+	cub->max_dist = 10.0f;
 
 	// here goes the real angle and the real camera
 
