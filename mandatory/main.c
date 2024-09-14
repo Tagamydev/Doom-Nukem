@@ -3264,9 +3264,8 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist)
 		pixel.px = (float)x;
 		pixel.py = (float)y;
 		put_pixel(cub->game_img, pixel);
-		sample_depth = 1.0f - sample_depth;
-		pixel.py = (float)cub->main_window->res.height / 2.0f;
-		pixel.py *= sample_depth;
+		pixel.py -= (float)(cub->main_window->res.height / 2);
+		pixel.py = (float)(cub->main_window->res.height / 2) - pixel.py;
 		put_pixel(cub->game_img, pixel);
 		y++;
 		helper++;
@@ -3286,12 +3285,14 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 	dist = cub->player->camera->angle - angle;
 	dist = deg2_rad(dist);
 	dist = ray->real_dist * cos(dist);
-	wall_height = (int)((float)cub->main_window->res.height / dist);
+	wall_height = (int)((float)cub->main_window->res.height / ray->real_dist);
 	fake_mode_7(cub, ray, ray_n, max_dist);
+	/*
 	if (cub->game_mode == GAME)
 		draw_wall(max_dist, wall_height, cub, ray_n, ray, angle);
 	if (cub->game_mode == EDITOR)
 		draw_line_remap(line(tmp, point(ray->real_x, ray->real_y)), cub->map_editor, cub->editor_img, color(GREEN));
+		*/
 
 	ray->del(ray);
 }
