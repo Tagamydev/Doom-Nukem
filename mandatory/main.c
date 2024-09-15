@@ -3130,7 +3130,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		pixel.px = (float)wall_n;
 		pixel.py = (float)y;
 		pixel.color	= color(WHITE);
-		//pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
+		pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
 
 		// SHADOW
 		/*
@@ -3281,16 +3281,18 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist)
 	// 157-934 = 777
 	// 100 degrees
 	// 475-532 = 57
-	if (x == 320)
+	float	ref_height;
+
+	ref_height = 874;
+
+	if (x == 84)
 	{
 		pixel.px = (float)x;
 		pixel.py = (float)0;
 		pixel.color = color(WHITE);
-		float	ref_height;
 
-		ref_height = 528;
 		pixel.py = (float)(cub->main_window->res.height / 2);
-		pixel.py -= 264;
+		pixel.py -= ref_height / 2;
 		int	z;
 
 		z = 0;
@@ -3302,16 +3304,14 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist)
 		}
 
 	}
-	if (x == 848)
+	if (x == 918)
 	{
 		pixel.px = (float)x;
 		pixel.py = (float)0;
 		pixel.color = color(WHITE);
-		float	ref_height;
 
-		ref_height = 528;
 		pixel.py = (float)(cub->main_window->res.height / 2);
-		pixel.py -= 264;
+		pixel.py -= ref_height / 2;
 		int	z;
 
 		z = 0;
@@ -3329,20 +3329,48 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 	t_point	tmp;
 	int		wall_height;
 	float	dist;
+	float	tmp2;
+	float	tmp_max;
+	float	max_max;
 
 	if (!ray)
 		return ;
-	/*
 	tmp = cub->player->camera->pos;
 	dist = ray->real_dist;
 	dist = cub->player->camera->angle - angle;
 	dist = deg2_rad(dist);
 	dist = ray->real_dist * cos(dist);
-	dist = dist * cub->wall_height;
+	//dist = ray->real_dist;
+
+
+	//dist = (float)cub->main_window->res.height / dist;
+	tmp2 = cub->player->camera->pos.pz;
+	//tmp2 = 241.5f / cub->player->camera->pos.pz;
+	//dist *= tmp2;
+	tmp_max = max_dist / tmp2;
+	dist	= dist / tmp2;
+	dist = (float)cub->game_img->resolution.height / dist;
+	//dist	= dist / tmp_max;
+	//dist	= dist / tmp_max;
+	//dist = dist / (float)cub->game_img->resolution.height;
+	//dist *= 10;
+
+	/*
+	dist	= dist + 1.0f;
+	dist	= 2.0f - dist;
+	dist *= max_max;
 	*/
-	dist = ray->real_dist;
-	dist *= cub->player->camera->pos.pz;
-	wall_height = (int)((float)cub->main_window->res.height / dist);
+	//max_max = (float)cub->game_img->resolution.height / dist;
+	//dist = (float)cub->game_img->resolution.height / dist;
+
+	wall_height = (int)dist;
+
+	if (ray_n == 500)
+		printf("wall height :%f, %f, %f, %f\n", dist, tmp_max, ray->real_dist, max_max);
+	if (ray_n >= 500 && ray_n <= 510)
+	{
+		;//wall_height = max_max * 2.0f;
+	}
 	fake_mode_7(cub, ray, ray_n, max_dist);
 	if (cub->game_mode == GAME)
 		draw_wall(max_dist, wall_height, cub, ray_n, ray, angle);
@@ -3513,8 +3541,8 @@ int	acurated_delta_time(t_cub *cub)
 	{
 		second = 1;
 		printf("fps:%d\n", cub->frame);
-		printf("player pos:%f,%f, angle:%f\n", 
-		cub->player->camera->pos.px, cub->player->camera->pos.py, cub->player->camera->angle);
+		printf("player pos:%f,%f, angle:%f, fov:%f\n", 
+		cub->player->camera->pos.px, cub->player->camera->pos.py, cub->player->camera->angle, cub->player->camera->fov);
 		printf("last:%f\n", now);
 		cub->frame = 0;
 		last = now;
@@ -3711,14 +3739,14 @@ int	key_press(int key, void *param)
 	if (key == XK_0)
 	{
 		cub->player->camera->fov -= 1.0f;
-		cub->player->camera->pos.pz = cub->player->camera->fov * 0.15f;//0.0576f;
+		cub->player->camera->pos.pz = cub->player->camera->fov * cub->height_multiplier;//0.0576f;
 		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, cub->player->camera->angle);
 
 	}
 	if (key == XK_9)
 	{
 		cub->player->camera->fov += 1.0f;
-		cub->player->camera->pos.pz = cub->player->camera->fov * 0.15f;//0.0576f;
+		cub->player->camera->pos.pz = cub->player->camera->fov * cub->height_multiplier;//0.0576f;
 		update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, cub->player->camera->angle);
 	}
 	if (key == XK_1)
@@ -4048,8 +4076,8 @@ int	main(int argc, char **argv)
 	// here goes the real angle and the real camera
 	//77 73
 	cub->player->camera->pos.px = 3.5;
-	cub->player->camera->pos.py = 4.5;
-	cub->player->camera->fov = 90;
+	cub->player->camera->pos.py = 9.0;
+	cub->player->camera->fov = 57;
 	//cub->player->camera->fov = 120;
 	cub->shadow_tex_size = 1000.0f;
 	cub->wall_height = 2.0f;
@@ -4062,7 +4090,8 @@ int	main(int argc, char **argv)
 	//cub->player->camera->pos.pz = 1.75f;
 
 	//cub->player->camera->pos.pz = 1.5;//0.0576f;
-	cub->player->camera->pos.pz = cub->player->camera->fov * 0.15f;//0.0576f;
+	cub->height_multiplier = 0.15555555f;
+	cub->player->camera->pos.pz = cub->player->camera->fov * cub->height_multiplier;//0.0576f;
 	//cub->player->camera->pos.pz = 17;//0.0576f;
 	update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 270);
 

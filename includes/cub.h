@@ -96,6 +96,9 @@ typedef struct s_cub
 	float				near_plane;
 
 
+	float				height_multiplier;
+
+
 
 
 	char				*north_path;
