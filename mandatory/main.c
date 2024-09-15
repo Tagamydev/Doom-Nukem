@@ -3194,6 +3194,8 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist)
 	t_point	near_pt1;
 	t_point	near_pt2;
 
+	min_dist = cub->near_plane;
+
 	max_dist = max_dist / cub->player->camera->pos.pz;
 
 	far_pt1 = cub->player->camera->pos;
@@ -3279,16 +3281,16 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist)
 	// 157-934 = 777
 	// 100 degrees
 	// 475-532 = 57
-	if (x == 157)
+	if (x == 320)
 	{
 		pixel.px = (float)x;
 		pixel.py = (float)0;
 		pixel.color = color(WHITE);
 		float	ref_height;
 
-		ref_height = 777;
+		ref_height = 528;
 		pixel.py = (float)(cub->main_window->res.height / 2);
-		pixel.py -= 388;
+		pixel.py -= 264;
 		int	z;
 
 		z = 0;
@@ -3300,16 +3302,16 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist)
 		}
 
 	}
-	if (x == 934)
+	if (x == 848)
 	{
 		pixel.px = (float)x;
 		pixel.py = (float)0;
 		pixel.color = color(WHITE);
 		float	ref_height;
 
-		ref_height = 777;
+		ref_height = 528;
 		pixel.py = (float)(cub->main_window->res.height / 2);
-		pixel.py -= 388;
+		pixel.py -= 264;
 		int	z;
 
 		z = 0;
@@ -3330,12 +3332,16 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 
 	if (!ray)
 		return ;
+	/*
 	tmp = cub->player->camera->pos;
 	dist = ray->real_dist;
 	dist = cub->player->camera->angle - angle;
 	dist = deg2_rad(dist);
 	dist = ray->real_dist * cos(dist);
 	dist = dist * cub->wall_height;
+	*/
+	dist = ray->real_dist;
+	dist *= cub->player->camera->pos.pz;
 	wall_height = (int)((float)cub->main_window->res.height / dist);
 	fake_mode_7(cub, ray, ray_n, max_dist);
 	if (cub->game_mode == GAME)
@@ -3393,7 +3399,7 @@ int	game_mode(t_cub *cub)
 	ray_casting(cub, minimap);
 
 	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->game_img->img, 0, 0);
-	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->minimap_img->img, 0, 0);
+	//mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->minimap_img->img, 0, 0);
 	//mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->test_tex->img, 400, 0);
 }
 
@@ -3717,15 +3723,17 @@ int	key_press(int key, void *param)
 	}
 	if (key == XK_1)
 	{
-		cub->player->camera->pos.pz -= 0.1f;
+		cub->near_plane -= 0.01f;
 		printf("height!!%f\n", cub->player->camera->pos.pz);
 		printf("fov!!%f\n", cub->player->camera->fov);
+		printf("nearrrrr=====================!!%f\n", cub->near_plane);
 	}
 	if (key == XK_2)
 	{
-		cub->player->camera->pos.pz += 0.1f;
+		cub->near_plane += 0.01f;
 		printf("height!!%f\n", cub->player->camera->pos.pz);
 		printf("fov!!%f\n", cub->player->camera->fov);
+		printf("nearrrrr=====================!!%f\n", cub->near_plane);
 	}
 	if (key == XK_3)
 	{
@@ -4039,8 +4047,8 @@ int	main(int argc, char **argv)
 
 	// here goes the real angle and the real camera
 	//77 73
-	cub->player->camera->pos.px = 3.440702;
-	cub->player->camera->pos.py = 11.345928;
+	cub->player->camera->pos.px = 3.5;
+	cub->player->camera->pos.py = 4.5;
 	cub->player->camera->fov = 90;
 	//cub->player->camera->fov = 120;
 	cub->shadow_tex_size = 1000.0f;
@@ -4079,6 +4087,7 @@ int	main(int argc, char **argv)
 	}
 	create_arrow_texture(cub->shadow_tex, cub->shadow_tex_size);
 	cub->ambient_oclussion = 1;
+	cub->near_plane = 0.0f;
 	cub->max_dist = 10.0f;
 
 	// here goes the real angle and the real camera

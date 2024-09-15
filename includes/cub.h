@@ -93,6 +93,8 @@ typedef struct s_cub
 
 	float				wall_height;
 
+	float				near_plane;
+
 
 
 
