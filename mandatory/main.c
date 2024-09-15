@@ -3338,9 +3338,9 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 	dist = dist * cub->wall_height;
 	wall_height = (int)((float)cub->main_window->res.height / dist);
 	fake_mode_7(cub, ray, ray_n, max_dist);
-	/*
 	if (cub->game_mode == GAME)
 		draw_wall(max_dist, wall_height, cub, ray_n, ray, angle);
+	/*
 	if (cub->game_mode == EDITOR)
 		draw_line_remap(line(tmp, point(ray->real_x, ray->real_y)), cub->map_editor, cub->editor_img, color(GREEN));
 		*/
