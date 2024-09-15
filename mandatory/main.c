@@ -2713,8 +2713,8 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	ray = player;
 	delta_x = cos(deg2_rad(angle));
 	delta_y = sin(deg2_rad(angle));
-	ray.px += delta_x * distance;
-	ray.py += delta_y * distance;
+	ray.px += delta_x * distance * 10;
+	ray.py += delta_y * distance * 10;
 	ray.pz = -1.0f;
 
 	limits = check_limits_dda(angle);
@@ -3139,7 +3139,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		shadow *= cub->ambient_oclussion;
 		shadow = 1.0f - shadow;
 		pixel.color = color_mix(color(BLACK), pixel.color, shadow);
-		pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
+		//pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
 
 		put_pixel(cub->game_img, pixel);
 		
@@ -3179,6 +3179,22 @@ char	sample_map(char **map, float sample_x, float sample_y)
 	if (x > max_x || y > max_y)
 		return ('0');
 	return (map[y][x]);
+}
+
+int	get_shadow_case_from_map_no_side(int x, int y, t_cub *cub)
+{
+	int	up;
+	int	down;
+	int	left;
+	int	right;
+	int	result;
+
+	up = check_wall_in_map(x, y - 1, cub->map);
+	down = check_wall_in_map(x, y + 1, cub->map);
+	left = check_wall_in_map(x - 1, y, cub->map);
+	right = check_wall_in_map(x + 1, y, cub->map);
+	result = (up * 1) + (down * 10) + (left * 100) + (right * 1000);
+	return (result);
 }
 
 void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wall_size, t_img *img)
@@ -3255,8 +3271,12 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 		//printf("%f, %f\n", sample_x, sample_y);
 		map_sample = sample_map(cub->map, sample_x, sample_y);
 		if (map_sample == '1')
+		{
+			//pixel.color = color(BLACK);
 			pixel.color = color(RED);
-		else
+
+		}
+		else if (1)
 		{
 			if ((int)sample_x % 2 == 0)
 			{
@@ -3272,12 +3292,47 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 				else
 					pixel.color = color(BLUE);
 			}
+
+		}
+		else
+		{
+			int	shadow_case;
+			float	text_x;
+			float	text_y;
+			float	darker;
+			float	tex_size;
+
+			tex_size = cub->shadow_tex_size - 1;
+			darker = 1;
+			shadow_case = get_shadow_case_from_map_no_side(sample_x, sample_y, cub);
+			pixel.color = color(WHITE);
+			if (shadow_case != 0)
+			{
+				text_x = sample_x - (float)((int)sample_x);
+				text_y = sample_y - (float)((int)sample_y);
+
+				if (text_x < 0 || text_x > 1)
+					text_x = 0;
+				if (text_y < 0 || text_y > 1)
+					text_y = 0;
+				if (shadow_case % 10)
+					darker *= cub->shadow_tex[(int)(text_y * tex_size)][(int)(text_x * tex_size)];
+				if ((shadow_case / 10) % 10)
+					darker *= cub->shadow_tex[(int)((1.0f - text_y) * tex_size)][(int)((1.0f - text_x) * tex_size)];
+				if ((shadow_case / 100) % 100)
+					darker *= cub->shadow_tex[(int)(text_x * tex_size)][(int)(text_y * tex_size)];
+				if ((shadow_case / 1000) % 1000)
+					darker *= cub->shadow_tex[(int)((1.0f - text_x) * tex_size)][(int)((1.0f - text_y) * tex_size)];
+				darker = 1.0f - darker;
+				darker *= cub->ambient_oclussion;
+				darker = 1.0f - darker;
+				pixel.color = color_mix(color(BLACK), pixel.color, darker);
+			}
 		}
 		float	lerp;
 
 		lerp = (float)(helper) / (((float)cub->game_img->resolution.height) / 2.0f);
 
-		lerp *= lerp;
 		lerp *= lerp;
 		pixel.px = (float)x;
 		pixel.py = (float)y;
@@ -3496,10 +3551,12 @@ int	acurated_delta_time(t_cub *cub)
 	if ((int)now > last)
 	{
 		second = 1;
+		/*
 		printf("fps:%d\n", cub->frame);
 		printf("player pos:%f,%f, angle:%f, fov:%f\n", 
 		cub->player->camera->pos.px, cub->player->camera->pos.py, cub->player->camera->angle, cub->player->camera->fov);
 		printf("last:%f\n", now);
+		*/
 		cub->frame = 0;
 		last = now;
 	}
@@ -3707,7 +3764,7 @@ int	key_press(int key, void *param)
 	}
 	if (key == XK_1)
 	{
-		cub->height_multiplier -= 0.01f;
+		cub->height_multiplier -= 0.0001f;
 		printf("nearrrrr=====================!!%f\n", cub->near_plane);
 		printf("nearrrrr=====================!!%f\n", cub->near_plane);
 		printf("nearrrrr=====================!!%f\n", cub->near_plane);
@@ -3717,7 +3774,7 @@ int	key_press(int key, void *param)
 	}
 	if (key == XK_2)
 	{
-		cub->height_multiplier += 0.01f;
+		cub->height_multiplier += 0.001f;
 		printf("nearrrrr=====================!!%f\n", cub->near_plane);
 		printf("nearrrrr=====================!!%f\n", cub->near_plane);
 		printf("nearrrrr=====================!!%f\n", cub->near_plane);
@@ -3739,12 +3796,12 @@ int	key_press(int key, void *param)
 	}
 	if (key == XK_5)
 	{
-		cub->max_dist -= 1.0f;
+		cub->max_dist -= 0.01f;
 		printf("max_dist !!!!!!!!%f\n", cub->max_dist);
 	}
 	if (key == XK_6)
 	{
-		cub->max_dist += 1.0f;
+		cub->max_dist += 0.01f;
 		printf("max_dist !!!!!!!!%f\n", cub->max_dist);
 	}
 	if (cub->game_mode == GAME)
@@ -4047,9 +4104,9 @@ int	main(int argc, char **argv)
 
 	// here goes the real angle and the real camera
 	//77 73
-	cub->player->camera->pos.px = 3.5;
-	cub->player->camera->pos.py = 15.0;
-	cub->player->camera->fov = 12.6;
+	cub->player->camera->pos.px = 12.773010;
+	cub->player->camera->pos.py = 1.358813;
+	cub->player->camera->fov = 46;
 	//cub->player->camera->fov = 120;
 	cub->shadow_tex_size = 1000.0f;
 	cub->wall_height = 2.0f;
@@ -4063,10 +4120,11 @@ int	main(int argc, char **argv)
 
 	//cub->player->camera->pos.pz = 1.5;//0.0576f;
 	//cub->height_multiplier = 0.15555555f;
-	cub->height_multiplier = 0.435555f;
+	//cub->height_multiplier = 0.435555f;
+	cub->height_multiplier = 0.027255f;
 	cub->player->camera->pos.pz = cub->player->camera->fov * cub->height_multiplier;//0.0576f;
 	//cub->player->camera->pos.pz = 17;//0.0576f;
-	update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 270);
+	update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 170);
 
 	cub->shadow_tex = malloc((size_t)(sizeof(float *) * cub->shadow_tex_size));
 	if (!cub->shadow_tex)
@@ -4088,9 +4146,9 @@ int	main(int argc, char **argv)
 		shadow_i++;
 	}
 	create_arrow_texture(cub->shadow_tex, cub->shadow_tex_size);
-	cub->ambient_oclussion = 0.9;
+	cub->ambient_oclussion = 1;
 	cub->near_plane = 0.0f;
-	cub->max_dist = 30.0f;
+	cub->max_dist = 1.684f;
 
 	// here goes the real angle and the real camera
 
