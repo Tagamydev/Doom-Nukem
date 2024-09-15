@@ -3270,6 +3270,46 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist)
 		y++;
 		helper++;
 	}
+	// reference
+	/*
+	if (x == 320)
+	{
+		pixel.px = (float)x;
+		pixel.py = (float)0;
+		pixel.color = color(WHITE);
+
+		pixel.py = (float)(cub->main_window->res.height / 2);
+		pixel.py -= 264.0f;
+		int	z;
+
+		z = 0;
+		while (z < 528)
+		{
+			put_pixel(cub->game_img, pixel);
+			pixel.py += 1.0f;
+			z++;
+		}
+
+	}
+	if (x == 848)
+	{
+		pixel.px = (float)x;
+		pixel.py = (float)0;
+		pixel.color = color(WHITE);
+
+		pixel.py = (float)(cub->main_window->res.height / 2);
+		pixel.py -= 264.0f;
+		int	z;
+
+		z = 0;
+		while (z < 528)
+		{
+			put_pixel(cub->game_img, pixel);
+			pixel.py += 1.0f;
+			z++;
+		}
+	}
+	*/
 }
 
 void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, t_cub_ray *ray)
@@ -3285,11 +3325,12 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 	dist = cub->player->camera->angle - angle;
 	dist = deg2_rad(dist);
 	dist = ray->real_dist * cos(dist);
-	wall_height = (int)((float)cub->main_window->res.height / ray->real_dist);
+	dist = dist * cub->wall_height;
+	wall_height = (int)((float)cub->main_window->res.height / dist);
 	fake_mode_7(cub, ray, ray_n, max_dist);
-	/*
 	if (cub->game_mode == GAME)
 		draw_wall(max_dist, wall_height, cub, ray_n, ray, angle);
+	/*
 	if (cub->game_mode == EDITOR)
 		draw_line_remap(line(tmp, point(ray->real_x, ray->real_y)), cub->map_editor, cub->editor_img, color(GREEN));
 		*/
@@ -3673,7 +3714,18 @@ int	key_press(int key, void *param)
 		printf("height!!%f\n", cub->player->camera->pos.pz);
 		printf("fov!!%f\n", cub->player->camera->fov);
 	}
-
+	if (key == XK_3)
+	{
+		cub->wall_height -= 0.001f;
+		printf("-s-ssssssss=======================\n");
+		printf("height!!%f\n", cub->wall_height);
+	}
+	if (key == XK_4)
+	{
+		cub->wall_height += 0.001f;
+		printf("-s-ssssssss=======================\n");
+		printf("height!!%f\n", cub->wall_height);
+	}
 	if (cub->game_mode == GAME)
 		key_press_game(key, cub);
 	if (cub->game_mode == EDITOR)
@@ -3974,11 +4026,12 @@ int	main(int argc, char **argv)
 
 	// here goes the real angle and the real camera
 	//77 73
-	cub->player->camera->pos.px = 2.941313;
-	cub->player->camera->pos.py = 7.410974;
-	cub->player->camera->fov = 18;
+	cub->player->camera->pos.px = 3.340702;
+	cub->player->camera->pos.py = 4.945918;
+	cub->player->camera->fov = 90;
 	cub->shadow_tex_size = 1000.0f;
-	cub->player->camera->pos.pz = 0.101f;
+	cub->wall_height = 2.0f;
+	cub->player->camera->pos.pz = 0.071f;
 	update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 270);
 
 	cub->shadow_tex = malloc((size_t)(sizeof(float *) * cub->shadow_tex_size));

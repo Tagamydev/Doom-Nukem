@@ -91,6 +91,8 @@ typedef struct s_cub
 
 	float				max_dist;
 
+	float				wall_height;
+
 
 
 
