@@ -1203,21 +1203,17 @@ int	draw_bsp(t_cub *cub, t_map_editor map_editor, t_color col, int mode, t_img *
 
 int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col, t_img *img)
 {
-	// para comprobar la bbox del player y un sector simplemente saca el angulo entre el player y el pt medio del sector
-	static	t_point	last_pos = {0};
-	static	t_point	last_fov1 = {0};
-	static	t_point	last_fov2 = {0};
 	t_point	pos;
 	t_point	fov1;
 	t_point	fov2;
 
 	pos = cub->player->camera->pos;
 
-	fov1 = point(pos.px + (cub->max_dist  * cub->fov1_deltas.px), 
-	pos.py + (cub->max_dist  * cub->fov1_deltas.py));
+	fov1 = point(pos.px + (cub->max_dist * 5  * cub->fov1_deltas.px), 
+	pos.py + (cub->max_dist * 5  * cub->fov1_deltas.py));
 
-	fov2 = point(pos.px + (cub->max_dist  * cub->fov2_deltas.px), 
-	pos.py + (cub->max_dist  * cub->fov2_deltas.py));
+	fov2 = point(pos.px + (cub->max_dist * 5 * cub->fov2_deltas.px), 
+	pos.py + (cub->max_dist  * 5 * cub->fov2_deltas.py));
 
 
 	pos = remap_point(pos, map_editor.screen_zoom, map_editor.screen_center, img->resolution);
@@ -1226,15 +1222,8 @@ int	draw_player(t_cub *cub, t_map_editor map_editor, t_color col, t_img *img)
 
 	pos.px = (int)pos.px;
 	pos.py = (int)pos.py;
-	draw_circle(5, img, color_point(last_pos, color(BLACK)));
 	draw_circle(5, img, color_point(pos, col));
 
-	draw_line(last_pos, last_fov1, img);
-	draw_line(last_pos, last_fov2, img);
-
-	last_pos = pos;
-	last_fov1 = fov1;
-	last_fov2 = fov2;
 
 	pos.color = col;
 	fov1.color = col;
@@ -2713,8 +2702,8 @@ t_cub_ray	*cub_cast_ray(t_cub *cub, float angle, float distance, t_map_editor mi
 	ray = player;
 	delta_x = cos(deg2_rad(angle));
 	delta_y = sin(deg2_rad(angle));
-	ray.px += delta_x * distance * 10;
-	ray.py += delta_y * distance * 10;
+	ray.px += delta_x * distance * 100;
+	ray.py += delta_y * distance * 100;
 	ray.pz = -1.0f;
 
 	limits = check_limits_dda(angle);
@@ -3101,6 +3090,7 @@ float	get_shadow(t_cub *cub, int shadow_case, float x_lerp, float y_lerp, int si
 
 void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub_ray *ray, float angle)
 {
+	float	res_height;
     int		wall_top;
 	int		min_top;
     int		wall_bottom;
@@ -3113,14 +3103,18 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 	int		shadow_case;
 	int		mirror_y;
 
-	wall_top = (int)(cub->main_window->res.height - (float)wall_height) / 2;
+	res_height = cub->game_img->resolution.height;
+	wall_top = (int)(res_height - (float)wall_height) / 2;
 	min_top = wall_top;
 	wall_bottom = wall_top + wall_height;
     if (wall_top < 0)
 		wall_top = 0;
-    if (wall_bottom >= cub->main_window->res.height) 
-		wall_bottom = (int)(cub->main_window->res.height - 1.0f);
-	color_mix_lerp = ray->dist / max_dist;
+    if (wall_bottom >= res_height) 
+		wall_bottom = (int)(res_height - 1.0f);
+	color_mix_lerp = ray->dist / (max_dist * 100);
+	color_mix_lerp *= 4;
+	if (color_mix_lerp > 1)
+		color_mix_lerp = 1;
 	//draw_sky_and_ground(wall_top, wall_bottom, cub, wall_n, color_mix_lerp, wall_height, ray, angle, max_dist);
 	y = wall_top;
 	real_pos_x = get_real_pos_x(ray->real_x, ray->real_y, ray->side);
@@ -3131,7 +3125,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		pixel.px = (float)wall_n;
 		pixel.py = (float)y;
 		pixel.color	= color(WHITE);
-		//pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
+		pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
 
 		// SHADOW
 		shadow = get_shadow(cub, shadow_case, real_pos_x, ((float)real_pos / (float)wall_height), ray->side);
@@ -3139,7 +3133,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		shadow *= cub->ambient_oclussion;
 		shadow = 1.0f - shadow;
 		pixel.color = color_mix(color(BLACK), pixel.color, shadow);
-		//pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
+		pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
 
 		put_pixel(cub->game_img, pixel);
 		
@@ -3270,11 +3264,11 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 		map_sample = sample_map(cub->map, sample_x, sample_y);
 		if (map_sample == '1')
 		{
-			//pixel.color = color(BLACK);
-			pixel.color = color(RED);
+			pixel.color = color(BLACK);
+			//pixel.color = color(RED);
 
 		}
-		else if (1)
+		else if (0)
 		{
 			if ((int)sample_x % 2 == 0)
 			{
@@ -3324,6 +3318,9 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 				darker = 1.0f - darker;
 				darker *= cub->ambient_oclussion;
 				darker = 1.0f - darker;
+				darker = 1.0f - darker;
+				darker *= 0.5f;
+				darker = 1.0f - darker;
 				pixel.color = color_mix(color(BLACK), pixel.color, darker);
 			}
 		}
@@ -3331,10 +3328,9 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 
 		lerp = (float)(helper) / (((float)cub->game_img->resolution.height) / 2.0f);
 
-		lerp *= lerp;
 		pixel.px = (float)x;
 		pixel.py = (float)y;
-		//pixel.color = color_mix(color(BLACK), pixel.color,lerp);
+		pixel.color = color_mix(color(BLACK), pixel.color,lerp);
 		put_pixel(img, pixel);
 		pixel.py -= (float)(res_height / 2);
 		pixel.py = (float)(res_height / 2) - pixel.py;
@@ -3352,9 +3348,12 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 	float	tmp2;
 	float	tmp_max;
 	float	max_max;
+	float	res_height;
 
 	if (!ray)
 		return ;
+
+	res_height = (float)cub->game_img->resolution.height;
 	tmp = cub->player->camera->pos;
 	dist = ray->real_dist;
 	dist = cub->player->camera->angle - angle;
@@ -3370,7 +3369,7 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 
 	dist	= dist / tmp2;
 
-	dist = (float)cub->game_img->resolution.height / dist;
+	dist = res_height / dist;
 
 	wall_height = (int)dist;
 
@@ -3399,7 +3398,7 @@ int	ray_casting(t_cub *cub, t_map_editor minimap)
 	float	multiplier;
 	float	max_dist;
 
-	number_of_rays = cub->main_window->res.width;
+	number_of_rays = cub->game_img->resolution.width;
 	multiplier = (float)cub->player->camera->fov / (float)number_of_rays;
 	start_angle = cub->player->camera->angle;
 	start_angle = start_angle - (cub->player->camera->fov / 2.0f);
@@ -3411,6 +3410,36 @@ int	ray_casting(t_cub *cub, t_map_editor minimap)
 		iterator++;
 		start_angle += multiplier;
 	}
+}
+
+void	put_img_to_render(t_img *img, t_img *render)
+{
+	int	x;
+	int	y;
+	float	x_prop;
+	float	y_prop;
+	float	aspect_ratio;
+	t_point	pixel;
+
+	y = 0;
+	aspect_ratio = ((float)render->resolution.width / (float)render->resolution.height);
+	while (y < render->resolution.height)
+	{
+		x = 0;
+		y_prop = (float)y / (float)render->resolution.height;
+		while (x < render->resolution.width)
+		{
+			x_prop = (float)x / (float)render->resolution.width;
+			
+			pixel.color = color_from_hex(get_pixel_img(img, (float)img->resolution.width * x_prop, (((float)img->resolution.height / aspect_ratio) * y_prop) + ((float)img->resolution.width / 2.0f) - ((float)img->resolution.height / (aspect_ratio * 2))));
+			pixel.px = (float)x;
+			pixel.py = (float)y;
+			put_pixel(render, pixel);
+			x++;
+		}
+		y++;
+	}
+
 }
 
 int	game_mode(t_cub *cub)
@@ -3425,8 +3454,6 @@ int	game_mode(t_cub *cub)
 	minimap.screen_center = point(cub->player->camera->pos.px * minimap.screen_zoom,
 	cub->player->camera->pos.py * minimap.screen_zoom);//cub->player->camera->pos;
 	
-
-	clean_pixels(cub->game_img);
 	clean_pixels(cub->minimap_img);
 
 	draw_grid(minimap, cub->minimap_img, color_from_rgb(100, 100, 100));
@@ -3434,9 +3461,17 @@ int	game_mode(t_cub *cub)
 	draw_player(cub, minimap, color_from_rgb(255, 255, 0), cub->minimap_img);
 
 	ray_casting(cub, minimap);
+	put_img_to_render(cub->game_img, cub->render_img);
 
-	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->game_img->img, 0, 0);
-	//mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->minimap_img->img, 0, 0);
+	//mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->game_img->img, 0, 0);
+	int	x;
+	int	y;
+
+	x = cub->main_window->res.width * 0.05f;
+	y = 10;//cub->render_img->resolution.height / 8;
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->render_img->img, x, y);
+	//mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->game_img->img, 0, 0);
+	mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->minimap_img->img, 0, 0);
 	//mlx_put_image_to_window(cub->mlx, cub->main_window->mlx_win, cub->test_tex->img, 400, 0);
 }
 
@@ -3549,12 +3584,10 @@ int	acurated_delta_time(t_cub *cub)
 	if ((int)now > last)
 	{
 		second = 1;
-		/*
 		printf("fps:%d\n", cub->frame);
 		printf("player pos:%f,%f, angle:%f, fov:%f\n", 
 		cub->player->camera->pos.px, cub->player->camera->pos.py, cub->player->camera->angle, cub->player->camera->fov);
 		printf("last:%f\n", now);
-		*/
 		cub->frame = 0;
 		last = now;
 	}
@@ -3986,7 +4019,13 @@ int	main(int argc, char **argv)
 
 
 	//================================================================================
-	cub->main_window = new_window(cub->mlx, resolution(500, 500), "main_window");
+	int	screen_sizex;
+	int	screen_sizey;
+
+	screen_sizex = 0;
+	screen_sizey = 0;
+	mlx_get_screen_size(cub->mlx, &screen_sizex, &screen_sizey);
+	cub->main_window = new_window(cub->mlx, resolution(screen_sizex, screen_sizey), "main_window");
 
 	if (!cub->main_window)
 	{
@@ -4005,8 +4044,19 @@ int	main(int argc, char **argv)
 		exit(-1);
 	}
 
+	int	render_img_width;
+	int	render_img_height;
 
-	cub->game_img = init_img(cub->mlx, cub->main_window->res);
+	render_img_height = cub->main_window->res.height - ((float)cub->main_window->res.height * 0.2f );
+	render_img_width = cub->main_window->res.width - ((float)cub->main_window->res.width * 0.1f );
+	cub->render_img = init_img(cub->mlx, resolution(render_img_width, render_img_height));
+	if (!cub->render_img)
+	{
+		printf("error pls fix this after\n");
+		exit(-1);
+	}
+
+	cub->game_img = init_img(cub->mlx, resolution(cub->main_window->res.width * 0.1, cub->main_window->res.width * 0.1));
 	if (!cub->game_img)
 	{
 		printf("error pls fix\n");
@@ -4015,7 +4065,7 @@ int	main(int argc, char **argv)
 	}
 
 	cub->minimap_img = init_img(cub->mlx, resolution(
-		cub->main_window->res.height / 5, cub->main_window->res.height / 5));
+		cub->main_window->res.height * 0.1, cub->main_window->res.height * 0.1));
 
 	// this part is parsing one map ======================================================
 	t_list	segments;
