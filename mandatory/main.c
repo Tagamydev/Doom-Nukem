@@ -2978,7 +2978,58 @@ int	get_shadow_case_from_ray(t_cub *cub, t_cub_ray *ray)
 	return (n_case);
 }
 
+void create_corner_texture(float	**shadow_tex, float size)
+{
+	float	**texture;
+	float	half;
+	float	disolver;
+	int		i;
+	int		j;
 
+	texture = shadow_tex;
+	half = size;
+	i = 0;
+	j = 0;
+	while (i < (int)size)
+	{
+		j = 0;
+		while (j < (int)size)
+		{
+			if (i < (int)half)
+				texture[i][j] = ((float)i / half);
+			else
+				texture[i][j] = 1.0f;
+			j++;
+		}
+		i++;
+	}
+}
+
+void create_ao_texture(float	**shadow_tex, float size)
+{
+	float	**texture;
+	float	half;
+	int		i;
+	int		j;
+
+	texture = shadow_tex;
+	half = size;
+	i = 0;
+	j = 0;
+	while (i < (int)size)
+	{
+		j = 0;
+		while (j < (int)size)
+		{
+			if (i < (int)half)
+				texture[i][j] = (float)i / half;
+			else
+				texture[i][j] = 1.0f;
+			j++;
+		}
+		i++;
+	}
+}
 void create_arrow_texture(float	**shadow_tex, float size)
 {
 	float	**texture;
@@ -3124,7 +3175,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		real_pos = y - min_top;
 		pixel.px = (float)wall_n;
 		pixel.py = (float)y;
-		pixel.color	= color(WHITE);
+		//pixel.color	= color(WHITE);
 		pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
 
 		// SHADOW
@@ -3134,6 +3185,9 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		shadow = 1.0f - shadow;
 		pixel.color = color_mix(color(BLACK), pixel.color, shadow);
 		pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
+		t_color	tmp_color;
+		//tmp_color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
+	//	pixel.color = color_mix(pixel.color, tmp_color, 0.5f);
 
 		put_pixel(cub->game_img, pixel);
 		
@@ -3189,6 +3243,22 @@ int	get_shadow_case_from_map_no_side(int x, int y, t_cub *cub)
 	return (result);
 }
 
+int	get_corner_case_from_map_no_side(int x, int y, t_cub *cub)
+{
+	int	up_left;
+	int	up_right;
+	int	down_left;
+	int	down_right;
+	int	result;
+
+	up_left = check_wall_in_map(x - 1, y - 1, cub->map);
+	up_right = check_wall_in_map(x + 1, y - 1, cub->map);
+	down_left = check_wall_in_map(x - 1, y + 1, cub->map);
+	down_right = check_wall_in_map(x + 1, y + 1, cub->map);
+	result = (up_left * 1) + (up_right * 10) + (down_left * 100) + (down_right * 1000);
+	return (result);
+}
+
 void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wall_size, t_img *img)
 {
 	float	res_width;
@@ -3233,9 +3303,11 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 	float	start_y;
 	float	end_x;
 	float	end_y;
+	float	external_darker;
 	char	map_sample;
 
 	y = res_height / 2;
+	external_darker = 1;
 	helper = 0;
 	sample_width = (float)x / (float)res_width;
 	if (wall_size > res_height)
@@ -3293,35 +3365,139 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 			float	text_y;
 			float	darker;
 			float	tex_size;
+			int		corner_case;
 
 			tex_size = cub->shadow_tex_size - 1;
 			darker = 1;
 			shadow_case = get_shadow_case_from_map_no_side(sample_x, sample_y, cub);
 			pixel.color = color(WHITE);
+			text_x = sample_x - (float)((int)sample_x);
+			text_y = sample_y - (float)((int)sample_y);
 			if (shadow_case != 0)
 			{
-				text_x = sample_x - (float)((int)sample_x);
-				text_y = sample_y - (float)((int)sample_y);
+				float	value;
 
 				if (text_x < 0 || text_x > 1)
 					text_x = 0;
 				if (text_y < 0 || text_y > 1)
 					text_y = 0;
 				if (shadow_case % 10)
-					darker *= cub->shadow_tex[(int)(text_y * tex_size)][(int)(text_x * tex_size)];
+				{
+					value = cub->ao_tex[(int)(text_y * tex_size)][(int)(text_x * tex_size)];
+					if (value < darker)
+						darker = value;
+				}
 				if ((shadow_case / 10) % 10)
-					darker *= cub->shadow_tex[(int)((1.0f - text_y) * tex_size)][(int)((1.0f - text_x) * tex_size)];
-				if ((shadow_case / 100) % 100)
-					darker *= cub->shadow_tex[(int)(text_x * tex_size)][(int)(text_y * tex_size)];
-				if ((shadow_case / 1000) % 1000)
-					darker *= cub->shadow_tex[(int)((1.0f - text_x) * tex_size)][(int)((1.0f - text_y) * tex_size)];
+				{
+					value = cub->ao_tex[(int)((1.0f - text_y) * tex_size)][(int)((1.0f - text_x) * tex_size)];
+					if (value < darker)
+						darker = value;
+				}
+
+				if ((shadow_case / 100) % 10)
+				{
+					value = cub->ao_tex[(int)(text_x * tex_size)][(int)(text_y * tex_size)];
+					if (value < darker)
+						darker = value;
+				}
+
+				if ((shadow_case / 1000) % 10)
+				{
+					value = cub->ao_tex[(int)((1.0f - text_x) * tex_size)][(int)((1.0f - text_y) * tex_size)];
+					if (value < darker)
+						darker = value;
+				}
+
+
+				/*
 				darker = 1.0f - darker;
 				darker *= cub->ambient_oclussion;
 				darker = 1.0f - darker;
+				*/
+				/*
 				darker = 1.0f - darker;
 				darker *= 0.5f;
 				darker = 1.0f - darker;
-				pixel.color = color_mix(color(BLACK), pixel.color, darker);
+				*/
+				if (darker != 1.0f)
+					external_darker = darker;
+
+			}
+			else
+			{
+				corner_case = get_corner_case_from_map_no_side(sample_x, sample_y, cub);
+				float	tmp_darker;
+				float	value1;
+				float	value2;
+
+				tmp_darker = 1;
+
+				if (corner_case)
+				{
+					if (text_x < 0 || text_x > 1)
+						text_x = 0;
+					if (text_y < 0 || text_y > 1)
+						text_y = 0;
+					if (corner_case % 10)
+					{
+						value1 = cub->ao_tex[(int)(text_x * tex_size)][(int)(text_y * tex_size)];
+						value2 = cub->ao_tex[(int)(text_y * tex_size)][(int)(text_x * tex_size)];
+
+						if (value1 > value2)
+							tmp_darker = value1;
+						else
+							tmp_darker = value2;
+					}
+					if (darker > tmp_darker)
+						darker = tmp_darker;
+					if ((corner_case / 10) % 10)
+					{
+						value1 = cub->ao_tex[(int)((1.0f - text_x) * tex_size)][(int)((1.0f - text_y) * tex_size)];
+						value2 = cub->ao_tex[(int)(text_y * tex_size)][(int)(text_x * tex_size)];
+
+						if (value1 > value2)
+							tmp_darker = value1;
+						else
+							tmp_darker = value2;
+					}
+					if (darker > tmp_darker)
+						darker = tmp_darker;
+
+					if ((corner_case / 100) % 10)
+					{
+						value1 = cub->ao_tex[(int)((1.0f - text_y) * tex_size)][(int)((1.0f - text_x) * tex_size)];
+						value2 = cub->ao_tex[(int)(text_x * tex_size)][(int)(text_y * tex_size)];
+
+						if (value1 > value2)
+							tmp_darker = value1;
+						else
+							tmp_darker = value2;
+					}
+					if (darker > tmp_darker)
+						darker = tmp_darker;
+
+					if ((corner_case / 1000) % 10)
+					{						
+						value1 = cub->ao_tex[(int)((1.0f - text_y) * tex_size)][(int)((1.0f - text_x) * tex_size)];
+						value2 = cub->ao_tex[(int)((1.0f - text_x) * tex_size)][(int)((1.0f - text_y) * tex_size)];
+
+						if (value1 > value2)
+							tmp_darker = value1;
+						else
+							tmp_darker = value2;
+					}
+					if (darker > tmp_darker)
+						darker = tmp_darker;
+
+					//darker = 1.0f - darker;
+					/*
+					darker = 1.0f - darker;
+					darker *= 0.66f;
+					darker = 1.0f - darker;
+					*/
+				}
+				if (darker != 1.0f)
+					external_darker = darker;
 			}
 		}
 		float	lerp;
@@ -3330,10 +3506,18 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 
 		pixel.px = (float)x;
 		pixel.py = (float)y;
-		pixel.color = color_mix(color(BLACK), pixel.color,lerp);
+
+		pixel.color = cub->floor;
+		pixel.color = color_mix(color(BLACK), pixel.color, external_darker);
+		pixel.color = color_mix(color(BLACK), pixel.color, lerp);
 		put_pixel(img, pixel);
+
 		pixel.py -= (float)(res_height / 2);
 		pixel.py = (float)(res_height / 2) - pixel.py;
+
+		pixel.color = cub->ceiling;
+		pixel.color = color_mix(color(BLACK), pixel.color, external_darker);
+		pixel.color = color_mix(color(BLACK), pixel.color, lerp);
 		put_pixel(img, pixel);
 		y++;
 		helper++;
@@ -4025,6 +4209,9 @@ int	main(int argc, char **argv)
 	screen_sizex = 0;
 	screen_sizey = 0;
 	mlx_get_screen_size(cub->mlx, &screen_sizex, &screen_sizey);
+
+	screen_sizex = 1000;
+	screen_sizey = 1000;
 	cub->main_window = new_window(cub->mlx, resolution(screen_sizex, screen_sizey), "main_window");
 
 	if (!cub->main_window)
@@ -4049,6 +4236,7 @@ int	main(int argc, char **argv)
 
 	render_img_height = cub->main_window->res.height - ((float)cub->main_window->res.height * 0.2f );
 	render_img_width = cub->main_window->res.width - ((float)cub->main_window->res.width * 0.1f );
+	//cub->render_img = init_img(cub->mlx, resolution(1000, 1000));
 	cub->render_img = init_img(cub->mlx, resolution(render_img_width, render_img_height));
 	if (!cub->render_img)
 	{
@@ -4056,7 +4244,7 @@ int	main(int argc, char **argv)
 		exit(-1);
 	}
 
-	cub->game_img = init_img(cub->mlx, resolution(cub->main_window->res.width * 0.1, cub->main_window->res.width * 0.1));
+	cub->game_img = init_img(cub->mlx, resolution(cub->main_window->res.width * 0.5, cub->main_window->res.width * 0.5));
 	if (!cub->game_img)
 	{
 		printf("error pls fix\n");
@@ -4152,8 +4340,8 @@ int	main(int argc, char **argv)
 
 	// here goes the real angle and the real camera
 	//77 73
-	cub->player->camera->pos.px = 12.773010;
-	cub->player->camera->pos.py = 1.358813;
+	cub->player->camera->pos.px = 2.884814;
+	cub->player->camera->pos.py = 6.926975;
 	cub->player->camera->fov = 46;
 	//cub->player->camera->fov = 120;
 	cub->shadow_tex_size = 1000.0f;
@@ -4172,7 +4360,7 @@ int	main(int argc, char **argv)
 	cub->height_multiplier = 0.027255f;
 	cub->player->camera->pos.pz = cub->player->camera->fov * cub->height_multiplier;//0.0576f;
 	//cub->player->camera->pos.pz = 17;//0.0576f;
-	update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 170);
+	update_player_angle(cub->player, &cub->p_deltas, &cub->fov1_deltas, &cub->fov2_deltas, 270);
 
 	cub->shadow_tex = malloc((size_t)(sizeof(float *) * cub->shadow_tex_size));
 	if (!cub->shadow_tex)
@@ -4194,9 +4382,54 @@ int	main(int argc, char **argv)
 		shadow_i++;
 	}
 	create_arrow_texture(cub->shadow_tex, cub->shadow_tex_size);
+
+	cub->ao_tex = malloc((size_t)(sizeof(float *) * cub->shadow_tex_size));
+	if (!cub->ao_tex)
+	{
+		//error!!!!!
+		return (0);
+	}
+
+	shadow_i = 0;
+	while (shadow_i < (int)cub->shadow_tex_size)
+	{
+		cub->ao_tex[shadow_i] = malloc((size_t)(sizeof(float) * cub->shadow_tex_size));
+		if (!cub->ao_tex[shadow_i])
+		{
+			//error!!!!!
+			return (0);
+		}
+		shadow_i++;
+	}
+	create_ao_texture(cub->ao_tex, cub->shadow_tex_size);
+
+	cub->corner_tex = malloc((size_t)(sizeof(float *) * cub->shadow_tex_size));
+	if (!cub->corner_tex)
+	{
+		//error!!!!!
+		return (0);
+	}
+
+	shadow_i = 0;
+	while (shadow_i < (int)cub->shadow_tex_size)
+	{
+		cub->corner_tex[shadow_i] = malloc((size_t)(sizeof(float) * cub->shadow_tex_size));
+		if (!cub->corner_tex[shadow_i])
+		{
+			//error!!!!!
+			return (0);
+		}
+		shadow_i++;
+	}
+	create_corner_texture(cub->corner_tex, cub->shadow_tex_size);
+
+
+
 	cub->ambient_oclussion = 1;
 	cub->near_plane = 0.0f;
 	cub->max_dist = 1.684f;
+	cub->floor = color(RED);
+	cub->ceiling = color(GREEN);
 
 	// here goes the real angle and the real camera
 

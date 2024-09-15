@@ -87,6 +87,8 @@ typedef struct s_cub
 	t_img				*test_tex;
 
 	float				**shadow_tex;
+	float				**ao_tex;
+	float				**corner_tex;
 	float				shadow_tex_size;
 	float				ambient_oclussion;
 
@@ -107,7 +109,7 @@ typedef struct s_cub
 	char				*east_path;
 	char				*west_path;
 	t_color				floor;
-	t_color				celling;
+	t_color				ceiling;
 	char				**map;
 
 	// PLAYER
