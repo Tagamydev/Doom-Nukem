@@ -3144,13 +3144,11 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		put_pixel(cub->game_img, pixel);
 		
 		// MIRROR
-		/*
 		mirror_y = wall_bottom + (wall_bottom - y);
 		pixel.py = (float)mirror_y;
 		pixel.py -= 1.0f;
 		pixel.color = color_mix(pixel.color, color_from_hex(get_pixel_img(cub->game_img, (int)pixel.px, (int)pixel.py)), (1.0f - (float)real_pos / (float)wall_height));
 		put_pixel(cub->game_img, pixel);
-		*/
 		y++;
 	}
 }
