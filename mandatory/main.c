@@ -2219,7 +2219,7 @@ int	frame(void *p_cub)
 	cub = (t_cub *)p_cub;
 	cub->frame += 1;
 	// change this!!!!!!!!
-	if (!BONUS)
+	if (BONUS)
 		acurated_delta_time(cub);
 	else
 		cub->delta_time = 0.016f;

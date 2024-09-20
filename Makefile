@@ -56,7 +56,7 @@ OBJS		= $(addprefix $(O_DIR)/, $(SRCS:.c=.o))
 
 $(O_DIR)/%.o: %.c
 	@mkdir -p $(@D)
-	$(CC) -D BONUS=0 $(INC) -g -c $< -o $(O_DIR)/$(<:.c=.o)
+	$(CC) -D BONUS=1 $(INC) -g -c $< -o $(O_DIR)/$(<:.c=.o)
 	@echo ""
 
 all: title submodules $(NAME)
