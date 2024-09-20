@@ -67,7 +67,6 @@ typedef struct s_triple_buff_img
 typedef struct s_cub
 {
 
-	t_list				segments;
 	t_map_editor		map_editor;
 
 	void				*mlx;
@@ -88,7 +87,6 @@ typedef struct s_cub
 
 	float				**shadow_tex;
 	float				**ao_tex;
-	float				**corner_tex;
 	float				shadow_tex_size;
 	float				ambient_occlusion;
 
@@ -121,7 +119,6 @@ typedef struct s_cub
 	t_point				fov2_screen;
 
 
-	t_bsp				*root_node;
 
 	t_img				*north;
 	t_img				*south;
