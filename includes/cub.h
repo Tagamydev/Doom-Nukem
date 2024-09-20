@@ -90,7 +90,7 @@ typedef struct s_cub
 	float				**ao_tex;
 	float				**corner_tex;
 	float				shadow_tex_size;
-	float				ambient_oclussion;
+	float				ambient_occlusion;
 
 	float				max_dist;
 

@@ -3013,7 +3013,7 @@ void create_ao_texture(float	**shadow_tex, float size)
 	int		j;
 
 	texture = shadow_tex;
-	half = size;
+	half = size * 0.25f;
 	i = 0;
 	j = 0;
 	while (i < (int)size)
@@ -3153,6 +3153,7 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 	float	shadow;
 	int		shadow_case;
 	int		mirror_y;
+	int		mirror_helper;
 
 	res_height = cub->game_img->resolution.height;
 	wall_top = (int)(res_height - (float)wall_height) / 2;
@@ -3170,18 +3171,19 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 	y = wall_top;
 	real_pos_x = get_real_pos_x(ray->real_x, ray->real_y, ray->side);
 	shadow_case = get_shadow_case_from_ray(cub, ray);
+	mirror_helper = 0;
 	while (y < wall_bottom)
 	{
 		real_pos = y - min_top;
 		pixel.px = (float)wall_n;
 		pixel.py = (float)y;
-		//pixel.color	= color(WHITE);
+		pixel.color	= color(WHITE);
 		pixel.color = color_from_hex(get_pixel_img(cub->test_tex, real_pos_x * (float)cub->test_tex->resolution.width, ((float)real_pos / (float)wall_height) * (float)cub->test_tex->resolution.height));
 
 		// SHADOW
 		shadow = get_shadow(cub, shadow_case, real_pos_x, ((float)real_pos / (float)wall_height), ray->side);
 		shadow = 1.0f - shadow;
-		shadow *= cub->ambient_oclussion;
+		shadow *= cub->ambient_occlusion;
 		shadow = 1.0f - shadow;
 		pixel.color = color_mix(color(BLACK), pixel.color, shadow);
 		pixel.color = color_mix(pixel.color, color(BLACK), color_mix_lerp);
@@ -3190,6 +3192,8 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 	//	pixel.color = color_mix(pixel.color, tmp_color, 0.5f);
 
 		put_pixel(cub->game_img, pixel);
+
+		tmp_color = pixel.color;
 		
 		// MIRROR
 		mirror_y = wall_bottom + (wall_bottom - y);
@@ -3197,7 +3201,15 @@ void draw_wall(float max_dist, int wall_height, t_cub *cub, size_t wall_n, t_cub
 		pixel.py -= 1.0f;
 		pixel.color = color_mix(pixel.color, color_from_hex(get_pixel_img(cub->game_img, (int)pixel.px, (int)pixel.py)), (1.0f - (float)real_pos / (float)wall_height));
 		put_pixel(cub->game_img, pixel);
+
+		pixel.py = (float)y - mirror_helper;
+
+		pixel.color = tmp_color;
+		pixel.color = color_mix(pixel.color, color_from_hex(get_pixel_img(cub->game_img, (int)pixel.px, (int)pixel.py)), (1.0f - (float)real_pos / (float)wall_height));
+		//pixel.color = color_mix(pixel.color, color_from_hex(get_pixel_img(cub->game_img, (int)pixel.px, (int)pixel.py)), (1.0f - (float)real_pos / (float)wall_height));
+		put_pixel(cub->game_img, pixel);
 		y++;
+		mirror_helper++;
 	}
 }
 
@@ -3305,6 +3317,7 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 	float	end_y;
 	float	external_darker;
 	char	map_sample;
+	t_color	ceiling;
 
 	y = res_height / 2;
 	external_darker = 1;
@@ -3336,6 +3349,7 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 		map_sample = sample_map(cub->map, sample_x, sample_y);
 		if (map_sample == '1')
 		{
+			ceiling = color(BLACK);
 			pixel.color = color(BLACK);
 			//pixel.color = color(RED);
 
@@ -3370,7 +3384,8 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 			tex_size = cub->shadow_tex_size - 1;
 			darker = 1;
 			shadow_case = get_shadow_case_from_map_no_side(sample_x, sample_y, cub);
-			pixel.color = color(WHITE);
+			pixel.color = cub->floor;
+			ceiling = cub->ceiling;
 			text_x = sample_x - (float)((int)sample_x);
 			text_y = sample_y - (float)((int)sample_y);
 			if (shadow_case != 0)
@@ -3409,18 +3424,20 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 				}
 
 
-				/*
 				darker = 1.0f - darker;
-				darker *= cub->ambient_oclussion;
+				darker *= cub->ambient_occlusion;
 				darker = 1.0f - darker;
-				*/
 				/*
 				darker = 1.0f - darker;
 				darker *= 0.5f;
 				darker = 1.0f - darker;
 				*/
 				if (darker != 1.0f)
-					external_darker = darker;
+				{
+					pixel.color = color_mix(color(BLACK), pixel.color, darker);
+					ceiling = color_mix(color(BLACK), ceiling, darker);
+				}
+					//external_darker = darker;
 
 			}
 			else
@@ -3490,14 +3507,17 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 						darker = tmp_darker;
 
 					//darker = 1.0f - darker;
-					/*
 					darker = 1.0f - darker;
-					darker *= 0.66f;
+					darker *= cub->ambient_occlusion;
 					darker = 1.0f - darker;
-					*/
 				}
 				if (darker != 1.0f)
-					external_darker = darker;
+				{
+					pixel.color = color_mix(color(BLACK), pixel.color, darker);
+					ceiling = color_mix(color(BLACK), ceiling, darker);
+				}
+					//external_darker = darker;
+					//external_darker = darker;
 			}
 		}
 		float	lerp;
@@ -3507,17 +3527,33 @@ void	fake_mode_7(t_cub *cub, t_cub_ray *ray, size_t x, float max_dist, size_t wa
 		pixel.px = (float)x;
 		pixel.py = (float)y;
 
-		pixel.color = cub->floor;
-		pixel.color = color_mix(color(BLACK), pixel.color, external_darker);
+		float	checker;
+		if ((int)sample_x % 2 == 0)
+		{
+			if ((int)sample_y % 2 == 0)
+				checker = 1.0f;
+			else
+				checker = 0.9f;
+		}
+		else
+		{
+			if ((int)sample_y % 2 == 0)
+				checker = 0.9f;
+			else
+				checker = 1.0f;
+		}
+
+
+		ceiling = color_mix(color(BLACK), ceiling, checker);
+		pixel.color = color_mix(color(BLACK), pixel.color, checker);
+		ceiling = color_mix(color(BLACK), ceiling, lerp);
 		pixel.color = color_mix(color(BLACK), pixel.color, lerp);
 		put_pixel(img, pixel);
 
 		pixel.py -= (float)(res_height / 2);
 		pixel.py = (float)(res_height / 2) - pixel.py;
+		pixel.color = ceiling;
 
-		pixel.color = cub->ceiling;
-		pixel.color = color_mix(color(BLACK), pixel.color, external_darker);
-		pixel.color = color_mix(color(BLACK), pixel.color, lerp);
 		put_pixel(img, pixel);
 		y++;
 		helper++;
@@ -4210,8 +4246,8 @@ int	main(int argc, char **argv)
 	screen_sizey = 0;
 	mlx_get_screen_size(cub->mlx, &screen_sizex, &screen_sizey);
 
-	screen_sizex = 1000;
-	screen_sizey = 1000;
+	screen_sizex = 600;
+	screen_sizey = 600;
 	cub->main_window = new_window(cub->mlx, resolution(screen_sizex, screen_sizey), "main_window");
 
 	if (!cub->main_window)
@@ -4425,11 +4461,11 @@ int	main(int argc, char **argv)
 
 
 
-	cub->ambient_oclussion = 1;
+	cub->ambient_occlusion = 0.5;
 	cub->near_plane = 0.0f;
 	cub->max_dist = 1.684f;
 	cub->floor = color(RED);
-	cub->ceiling = color(GREEN);
+	cub->ceiling = color(WHITE);
 
 	// here goes the real angle and the real camera
 
