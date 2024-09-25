@@ -56,6 +56,8 @@ static void	fill_structure(t_cub *cub, t_cubp *cubp)
 	cub->east_path = cubp->east_path;
 	cub->west_path = cubp->west_path;
 	cub->map = cubp->map;
+	printf("hello!!!!!!!!!!!!!!!!!!!!!!1\n");
+	printf("address cub map:%p\n", cub->map);
 	cub->floor = color_from_rgb(cubp->floor[0], cubp->floor[1], cubp->floor[2]);
 	cub->ceiling = color_from_rgb(cubp->ceiling[0], cubp->ceiling[1], cubp->ceiling[2]);
 	free_parsing(cubp);

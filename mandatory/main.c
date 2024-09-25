@@ -2134,6 +2134,31 @@ int	draw_square(size_t length, t_img *img, t_point start)
 	return (1);
 }
 
+int	print_map_cub(t_cub *cub)
+{
+	char	c;
+	int		x;
+	int		y;
+
+	x = 0;
+	y = 0;
+	printf("map start...%d");
+	while (cub->map[y])
+	{
+		printf("y..%d\n", y);
+		x = 0;
+		while (cub->map[0][x])
+		{
+			printf("x..%d\n", x);
+			c = cub->map[y][x];
+			printf("%c ", c);
+			x++;
+		}
+		printf("\n");
+		y++;
+	}
+}
+
 int	draw_map_walls(t_cub *cub, t_map_editor editor, t_img *img)
 {
 	t_point	tmp;
@@ -2141,6 +2166,12 @@ int	draw_map_walls(t_cub *cub, t_map_editor editor, t_img *img)
 	size_t	y;
 
 	y = 0;
+
+	printf("\n\n the map...\n");
+
+	print_map_cub(cub);
+
+	printf("\n\n the map...\n");
 	while (cub->map[y])
 	{
 		x = 0;
@@ -2651,7 +2682,9 @@ int	main(int argc, char **argv)
         }
         printf("\n");
     }
-	cub->map = map;
+	//cub->map = map;
+
+	printf("address cub map:%p\n", cub->map);
 
 	cub->map_editor = map_editor();
 	cub->game_mode = GAME;
