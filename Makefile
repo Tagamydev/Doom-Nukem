@@ -45,7 +45,22 @@ CC			= gcc $(CFLAGS) $(INC)
 
 SRCS		= \
 				./mandatory/main.c \
-				./mandatory/parsing/parsing.c 
+				./mandatory/parsing/check_file.c \
+				./mandatory/parsing/check_map.c \
+				./mandatory/parsing/check_path.c \
+				./mandatory/parsing/check_player.c \
+				./mandatory/parsing/check_textures.c \
+				./mandatory/parsing/clean_close.c \
+				./mandatory/parsing/fill_map.c \
+				./mandatory/parsing/fill_textures.c \
+				./mandatory/parsing/ft_is_space.c \
+				./mandatory/parsing/init_parsing.c \
+				./mandatory/parsing/map.c \
+				./mandatory/parsing/parse_color.c \
+				./mandatory/parsing/parse_map.c \
+				./mandatory/parsing/parsing.c \
+				./mandatory/parsing/player_dir.c \
+				./mandatory/parsing/print_error.c \
 
 #================================= OBJS =================================#
 
