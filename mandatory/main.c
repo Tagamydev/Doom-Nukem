@@ -2006,6 +2006,9 @@ void	draw_walls_from_ray(float max_dist, size_t ray_n, float angle, t_cub *cub, 
 	ray->del(ray);
 }
 
+# include <pthread.h>
+
+
 int	ray_casting(t_cub *cub, t_map_editor minimap)
 {
 	size_t	number_of_rays;
@@ -2023,7 +2026,10 @@ int	ray_casting(t_cub *cub, t_map_editor minimap)
 	while (iterator < number_of_rays)
 	{
 		draw_walls_from_ray(max_dist, iterator, start_angle, cub, cub_cast_ray(cub, fix_angle(start_angle), max_dist, minimap));
+
+		// angle
 		start_angle += multiplier;
+		// x
 		iterator++;
 	}
 }
@@ -2226,12 +2232,10 @@ int	frame(void *p_cub)
 
 	
 
-	/*
 	if (cub->delta_time < 0.016f)
 		cub->delta_time = 0.016f;
 	if (cub->delta_time > 0.1f)
 		cub->delta_time = 0.1f;
-		*/
 
 		if (cub->game_mode == GAME)
 			game_mode(cub);
@@ -2573,14 +2577,8 @@ int	main(int argc, char **argv)
 	if (BONUS)
 	{
 		mlx_get_screen_size(cub->mlx, &screen_sizex, &screen_sizey);
-		if (screen_sizex > 1000)
-			screen_sizex = 1000;
-		else
-			screen_sizex = 500;
-		if (screen_sizey > 1000)
-			screen_sizey = 1000;
-		else
-			screen_sizey = 500;
+		screen_sizex = 400;
+		screen_sizey = 400;
 	}
 	else
 	{
